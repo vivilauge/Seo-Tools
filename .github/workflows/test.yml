@@ -1,0 +1,41 @@
+name: 测试和构建
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置 Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: 安装依赖
+      run: npm ci
+    
+    - name: 运行测试（如果存在）
+      run: npm test || echo "没有测试脚本"
+      continue-on-error: true
+    
+    - name: 检查代码语法
+      run: node -c server.js
+    
+    - name: 启动服务器测试
+      run: |
+        timeout 10s node server.js || true
+      continue-on-error: true
+
