@@ -200,9 +200,18 @@ docker run -d -p 3000:3000 --name status-checker status-checker
 **详细说明：** 查看 [GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)
 
 **重要提示：** 
-- GitHub Actions 仅用于 CI/CD 测试和代码验证
-- **不能用于长期运行服务**（工作流有时间限制，最长 6 小时）
-- 如需运行服务供他人访问，请使用自己的服务器
+- ⚠️ **GitHub Actions 不能用于长期运行服务**
+  - GitHub Actions 是 CI/CD 工具，工作流运行完成后就会停止
+  - 免费账户最长运行时间只有 6 小时
+  - 不能提供公开访问的 URL
+  - 只能用于代码测试和验证
+
+**如需运行服务：**
+- 🚀 **推荐：Railway** - 免费、简单、一键部署（查看 [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md)）
+- 💻 **本地运行** - 在自己的电脑上运行（运行 `./quick-start.sh`）
+- ☁️ **其他平台** - Render、Vercel 等（查看 [SOLUTION.md](./SOLUTION.md)）
+
+**详细说明：** 查看 [SOLUTION.md](./SOLUTION.md) 了解所有可用方案
 
 ## 环境变量
 
