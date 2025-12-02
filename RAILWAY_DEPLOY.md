@@ -102,5 +102,5 @@ Railway 免费套餐包括：
 
 - Railway 文档：https://docs.railway.app
 - 查看项目日志排查问题
-- 参考 `SOLUTION.md` 了解其他方案
+- 在 Railway 控制台查看详细日志
 

@@ -2,6 +2,12 @@
 
 一个基于 Node.js 的网站状态码批量检查工具，支持实时显示检查结果。
 
+## About
+
+**在线演示：**
+- https://www.baidu.com/
+- https://www.google.com/
+
 ## 功能特点
 
 - ✅ 批量检查网站状态码
@@ -44,174 +50,26 @@ http://localhost:3000
 - ❌ **不推荐**：直接双击打开 `index.html` 文件，因为 API 调用会失败（浏览器安全限制）
 - 服务器会自动提供 `index.html` 页面，访问根路径 `/` 即可
 
-### GitHub Actions 自动化测试
+### 部署到 Railway（推荐）
 
-本项目使用 GitHub Actions 进行自动化测试和验证。
+Railway 是最简单的免费部署方案，适合偶尔使用的场景。
 
-**功能：**
-- ✅ 每次 push 代码自动运行测试
-- ✅ 代码语法检查
-- ✅ API 功能测试
-- ✅ 多 Node.js 版本兼容性测试（16.x, 18.x, 20.x）
-- ✅ CORS 支持验证
+**快速部署：**
 
-**查看测试结果：**
-1. 访问 GitHub 仓库
-2. 点击 "Actions" 标签页
-3. 查看工作流运行状态和详细日志
+1. 访问 https://railway.app
+2. 使用 GitHub 账号登录
+3. 点击 "New Project" → "Deploy from GitHub repo"
+4. 选择你的仓库 `vivilauge/Websit-Status-Check`
+5. 等待 1-2 分钟，获得公共 URL
 
-**详细说明：** 查看 [GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)
+**详细步骤：** 查看 [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md)
 
-**注意：** GitHub Actions 用于 CI/CD 测试，不能用于长期运行服务。如需运行服务，请使用本地服务器或自己的服务器。
-
-### 部署到服务器
-
-#### 方法一：直接运行（适合测试）
-
-1. 将项目文件上传到服务器
-
-2. 在服务器上安装 Node.js（如果还没有安装）
-
-3. 启动服务器：
-```bash
-node server.js
-```
-
-4. 访问服务器IP或域名：
-```
-http://your-server-ip:3000
-```
-
-#### 方法二：使用 PM2 管理进程（推荐生产环境）
-
-1. 安装 PM2：
-```bash
-npm install -g pm2
-```
-
-2. 启动应用（使用配置文件）：
-```bash
-pm2 start ecosystem.config.js
-```
-
-或者直接启动：
-```bash
-pm2 start server.js --name status-checker
-```
-
-3. 设置开机自启：
-```bash
-pm2 startup
-pm2 save
-```
-
-4. 查看状态：
-```bash
-pm2 status
-```
-
-5. 查看日志：
-```bash
-pm2 logs status-checker
-```
-
-6. 重启应用：
-```bash
-pm2 restart status-checker
-```
-
-7. 停止应用：
-```bash
-pm2 stop status-checker
-```
-
-#### 方法三：使用 Nginx 反向代理（推荐生产环境）
-
-1. 安装 Nginx（如果还没有安装）
-
-2. 配置 Nginx（编辑 `/etc/nginx/sites-available/default` 或创建新配置文件）：
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-3. 重启 Nginx：
-```bash
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-4. 使用 PM2 启动 Node.js 应用（见方法二）
-
-5. 访问：
-```
-http://your-domain.com
-```
-
-#### 方法四：使用 Docker（可选）
-
-1. 创建 `Dockerfile`：
-```dockerfile
-FROM node:16-alpine
-WORKDIR /app
-COPY package.json .
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
-2. 构建镜像：
-```bash
-docker build -t status-checker .
-```
-
-3. 运行容器：
-```bash
-docker run -d -p 3000:3000 --name status-checker status-checker
-```
-
-#### 方法五：使用 GitHub Actions（CI/CD 测试）
-
-项目已配置 GitHub Actions 自动化测试，每次 push 代码到 GitHub 时会自动：
-
-- ✅ 运行代码测试
-- ✅ 检查代码语法
-- ✅ 验证服务器启动
-- ✅ 测试 API 功能
-- ✅ 验证 CORS 支持
-- ✅ 多 Node.js 版本兼容性测试（16.x, 18.x, 20.x）
-
-**查看测试结果：**
-- 访问你的 GitHub 仓库 → "Actions" 标签页
-- 查看工作流运行状态和详细日志
-
-**详细说明：** 查看 [GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)
-
-**重要提示：** 
-- ⚠️ **GitHub Actions 不能用于长期运行服务**
-  - GitHub Actions 是 CI/CD 工具，工作流运行完成后就会停止
-  - 免费账户最长运行时间只有 6 小时
-  - 不能提供公开访问的 URL
-  - 只能用于代码测试和验证
-
-**如需运行服务：**
-- 🚀 **推荐：Railway** - 免费、简单、一键部署（查看 [RAILWAY_DEPLOY.md](./RAILWAY_DEPLOY.md)）
-- 💻 **本地运行** - 在自己的电脑上运行（运行 `./quick-start.sh`）
-- ☁️ **其他平台** - Render、Vercel 等（查看 [SOLUTION.md](./SOLUTION.md)）
-
-**详细说明：** 查看 [SOLUTION.md](./SOLUTION.md) 了解所有可用方案
+**优点：**
+- ✅ 完全免费（有免费额度）
+- ✅ 一键部署，无需配置
+- ✅ 自动 HTTPS
+- ✅ 每次 push 到 GitHub 自动更新
+- ✅ 可以暂停服务节省额度
 
 ## 环境变量
 
@@ -240,26 +98,28 @@ PORT=8080 node server.js
 
 - 默认端口是 3000，如果端口被占用，可以通过环境变量 `PORT` 修改
 - 服务器会同时提供静态文件服务和API服务
-- 如果部署到生产环境，建议使用 PM2 或 Docker 管理进程
-- 如果需要HTTPS，建议使用 Nginx 反向代理并配置SSL证书
+- Railway 部署会自动处理端口和 HTTPS，无需手动配置
 
 ## 故障排除
 
-### 端口被占用
+### 本地运行问题
 
-如果遇到端口被占用的错误，可以：
-1. 修改 `server.js` 中的 `PORT` 变量
-2. 或使用环境变量：`PORT=8080 node server.js`
+**端口被占用：**
+```bash
+PORT=8080 node server.js
+```
 
-### 无法访问
+**无法访问：**
+1. 确认服务器正在运行
+2. 检查防火墙设置
+3. 查看终端日志确认错误信息
 
-1. 检查防火墙是否开放了相应端口
-2. 检查服务器是否正在运行：`ps aux | grep node`
-3. 查看服务器日志确认是否有错误
+### Railway 部署问题
 
-### CORS 错误
-
-如果遇到跨域问题，检查 `server.js` 中的 CORS 设置是否正确。
+1. 在 Railway 控制台查看 "Logs" 标签页
+2. 确认服务状态为 "Active"
+3. 检查部署日志中的错误信息
+4. 如遇问题，可尝试重新部署
 
 ## 许可证
 
