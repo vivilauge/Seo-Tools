@@ -1,10 +1,11 @@
-name: 测试和构建
+name: 测试和验证
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -27,15 +28,101 @@ jobs:
     - name: 安装依赖
       run: npm ci
     
-    - name: 运行测试（如果存在）
-      run: npm test || echo "没有测试脚本"
-      continue-on-error: true
-    
     - name: 检查代码语法
-      run: node -c server.js
-    
-    - name: 启动服务器测试
       run: |
-        timeout 10s node server.js || true
-      continue-on-error: true
+        echo "🔍 检查 server.js 语法..."
+        node -c server.js
+        echo "✅ 语法检查通过"
+    
+    - name: 检查 API serverless 函数语法
+      run: |
+        if [ -f "api/server.js" ]; then
+          echo "🔍 检查 api/server.js 语法..."
+          node -c api/server.js
+          echo "✅ API 函数语法检查通过"
+        else
+          echo "ℹ️ api/server.js 不存在，跳过检查"
+        fi
+    
+    - name: 启动服务器并测试 API
+      run: |
+        echo "🚀 启动服务器..."
+        node server.js &
+        SERVER_PID=$!
+        sleep 3
+        
+        echo "🧪 测试服务器是否启动..."
+        if curl -f http://localhost:3000 > /dev/null 2>&1; then
+          echo "✅ 服务器启动成功"
+        else
+          echo "❌ 服务器启动失败"
+          exit 1
+        fi
+        
+        echo "🧪 测试 POST API /check_status..."
+        RESPONSE=$(curl -s -X POST http://localhost:3000/check_status \
+          -H "Content-Type: application/json" \
+          -d '{"url":"example.com","protocol":"http"}' \
+          -w "\nHTTP_CODE:%{http_code}")
+        
+        HTTP_CODE=$(echo "$RESPONSE" | grep -o "HTTP_CODE:[0-9]*" | cut -d: -f2)
+        BODY=$(echo "$RESPONSE" | sed 's/HTTP_CODE:[0-9]*$//')
+        
+        echo "响应状态码: $HTTP_CODE"
+        echo "响应内容: $BODY"
+        
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "✅ API 测试通过"
+        else
+          echo "❌ API 测试失败，状态码: $HTTP_CODE"
+          exit 1
+        fi
+        
+        echo "🧪 测试 OPTIONS 预检请求..."
+        OPTIONS_CODE=$(curl -s -X OPTIONS http://localhost:3000/check_status \
+          -H "Origin: http://localhost:3000" \
+          -w "%{http_code}" -o /dev/null)
+        
+        if [ "$OPTIONS_CODE" = "200" ]; then
+          echo "✅ CORS 预检请求测试通过"
+        else
+          echo "❌ CORS 预检请求失败，状态码: $OPTIONS_CODE"
+          exit 1
+        fi
+        
+        echo "🧪 测试 GET 请求（应该返回 405）..."
+        GET_CODE=$(curl -s -X GET http://localhost:3000/check_status \
+          -w "%{http_code}" -o /dev/null)
+        
+        if [ "$GET_CODE" = "405" ]; then
+          echo "✅ GET 请求正确返回 405"
+        else
+          echo "⚠️ GET 请求返回状态码: $GET_CODE（预期 405）"
+        fi
+        
+        echo "🛑 停止服务器..."
+        kill $SERVER_PID || true
+        wait $SERVER_PID 2>/dev/null || true
+        
+        echo "✅ 所有测试通过"
+    
+    - name: 验证静态文件服务
+      run: |
+        echo "🚀 启动服务器..."
+        node server.js &
+        SERVER_PID=$!
+        sleep 2
+        
+        echo "🧪 测试 index.html..."
+        if curl -f http://localhost:3000/ > /dev/null 2>&1; then
+          echo "✅ index.html 可以访问"
+        else
+          echo "❌ index.html 无法访问"
+          kill $SERVER_PID || true
+          exit 1
+        fi
+        
+        echo "🛑 停止服务器..."
+        kill $SERVER_PID || true
+        wait $SERVER_PID 2>/dev/null || true
 

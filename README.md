@@ -18,7 +18,13 @@
 
 1. 确保已安装 Node.js（版本 >= 12.0.0）
 
-2. 启动服务器：
+2. 克隆仓库：
+```bash
+git clone https://github.com/vivilauge/Websit-Status-Check.git
+cd Websit-Status-Check
+```
+
+3. 启动服务器：
 ```bash
 node server.js
 ```
@@ -28,7 +34,7 @@ node server.js
 npm start
 ```
 
-3. 在浏览器中访问：
+4. 在浏览器中访问：
 ```
 http://localhost:3000
 ```
@@ -37,6 +43,26 @@ http://localhost:3000
 - ✅ **推荐方式**：通过 Node.js 服务器访问（`http://localhost:3000`），这样前端和 API 都能正常工作
 - ❌ **不推荐**：直接双击打开 `index.html` 文件，因为 API 调用会失败（浏览器安全限制）
 - 服务器会自动提供 `index.html` 页面，访问根路径 `/` 即可
+
+### GitHub Actions 自动化测试
+
+本项目使用 GitHub Actions 进行自动化测试和验证。
+
+**功能：**
+- ✅ 每次 push 代码自动运行测试
+- ✅ 代码语法检查
+- ✅ API 功能测试
+- ✅ 多 Node.js 版本兼容性测试（16.x, 18.x, 20.x）
+- ✅ CORS 支持验证
+
+**查看测试结果：**
+1. 访问 GitHub 仓库
+2. 点击 "Actions" 标签页
+3. 查看工作流运行状态和详细日志
+
+**详细说明：** 查看 [GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)
+
+**注意：** GitHub Actions 用于 CI/CD 测试，不能用于长期运行服务。如需运行服务，请使用本地服务器或自己的服务器。
 
 ### 部署到服务器
 
@@ -156,64 +182,27 @@ docker build -t status-checker .
 docker run -d -p 3000:3000 --name status-checker status-checker
 ```
 
-#### 方法五：部署到云平台（推荐，适合 GitHub 项目）
+#### 方法五：使用 GitHub Actions（CI/CD 测试）
 
-项目已配置好多种云平台的部署文件，可以直接部署：
+项目已配置 GitHub Actions 自动化测试，每次 push 代码到 GitHub 时会自动：
 
-##### 🚀 Vercel 部署（推荐，免费且快速）
-
-1. 访问 [Vercel](https://vercel.com)
-2. 使用 GitHub 账号登录
-3. 点击 "New Project"
-4. 导入你的 GitHub 仓库 `vivilauge/Websit-Status-Check`
-5. Vercel 会自动检测到 `vercel.json` 配置文件
-6. 点击 "Deploy" 即可自动部署
-7. 部署完成后会获得一个免费的域名（如：`your-project.vercel.app`）
-
-**优点：**
-- ✅ 完全免费
-- ✅ 自动 HTTPS
-- ✅ 全球 CDN 加速
-- ✅ 自动部署（每次 push 到 GitHub 自动更新）
-
-##### 🚂 Railway 部署
-
-1. 访问 [Railway](https://railway.app)
-2. 使用 GitHub 账号登录
-3. 点击 "New Project" → "Deploy from GitHub repo"
-4. 选择你的仓库
-5. Railway 会自动检测到 `railway.json` 配置文件
-6. 点击 "Deploy" 开始部署
-
-**优点：**
-- ✅ 免费额度充足
-- ✅ 自动 HTTPS
-- ✅ 简单易用
-
-##### 🎨 Render 部署
-
-1. 访问 [Render](https://render.com)
-2. 使用 GitHub 账号登录
-3. 点击 "New" → "Web Service"
-4. 连接你的 GitHub 仓库
-5. Render 会自动检测到 `render.yaml` 配置文件
-6. 点击 "Create Web Service" 开始部署
-
-**优点：**
-- ✅ 免费套餐可用
-- ✅ 自动 HTTPS
-- ✅ 支持自动部署
-
-##### 📦 GitHub Actions（CI/CD）
-
-项目已配置 GitHub Actions，每次 push 代码到 GitHub 时会自动：
 - ✅ 运行代码测试
 - ✅ 检查代码语法
 - ✅ 验证服务器启动
+- ✅ 测试 API 功能
+- ✅ 验证 CORS 支持
+- ✅ 多 Node.js 版本兼容性测试（16.x, 18.x, 20.x）
 
-查看 Actions 状态：访问你的 GitHub 仓库 → "Actions" 标签页
+**查看测试结果：**
+- 访问你的 GitHub 仓库 → "Actions" 标签页
+- 查看工作流运行状态和详细日志
 
-**注意：** GitHub Actions 仅用于测试和 CI/CD，不能用于长期运行服务。如需运行服务，请使用上述云平台。
+**详细说明：** 查看 [GITHUB_ACTIONS.md](./GITHUB_ACTIONS.md)
+
+**重要提示：** 
+- GitHub Actions 仅用于 CI/CD 测试和代码验证
+- **不能用于长期运行服务**（工作流有时间限制，最长 6 小时）
+- 如需运行服务供他人访问，请使用自己的服务器
 
 ## 环境变量
 
