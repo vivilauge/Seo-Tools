@@ -1,5 +1,5 @@
 {
-  "name": "website-status-checker",
+  "name": "seo-tools",
   "version": "1.0.0",
   "description": "网站状态码批量检查工具",
   "main": "server.js",
