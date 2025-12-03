@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seo-Tools - 网站状态码批量检查工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px 30px;
+            overflow: hidden;
+        }
+
+        .header-nav {
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.1s;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+            transform: translateX(-3px);
+        }
+
+        .back-link::before {
+            content: '←';
+            margin-right: 5px;
+            font-size: 18px;
+        }
+
+
+        .content {
+            padding: 0;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            margin: -40px -30px 30px -30px;
+        }
+
+        .header-section h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: white;
+            background: none;
+            -webkit-text-fill-color: white;
+        }
+
+        .header-section .description {
+            font-size: 18px;
+            opacity: 0.9;
+            color: white;
+            margin-bottom: 0;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.1s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            min-height: 150px;
+            resize: vertical;
+            transition: all 0.1s;
+            background: white;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: #fafbff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .result-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+        .result-item.checking {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .result-item.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .result-item.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .result-item.redirect {
+            border-left-color: #17a2b8;
+            background: #d1ecf1;
+        }
+
+        .result-url {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .result-url a {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: opacity 0.1s;
+        }
+
+        .result-url a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        select:hover {
+            border-color: #667eea;
+        }
+
+        .filter-section {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .filter-btn {
+            padding: 8px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .result-item.hidden {
+            display: none;
+        }
+
+        .result-status {
+            margin-left: 15px;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-checking {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-200 {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-3xx {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .status-4xx {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-5xx {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-error {
+            background: #6c757d;
+            color: white;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.3s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <div style="text-align: left; margin-bottom: 15px;">
+                <a href="index.html" style="color: white; text-decoration: none; font-size: 14px; opacity: 0.9; transition: opacity 0.1s;">← 返回首页</a>
+            </div>
+            <h1>🌐 网站状态码批量检查工具</h1>
+            <p class="description">实时检查域名和路径的可访问性</p>
+        </div>
+        <div class="content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="concurrency">并发数（同时检查的域名数量）</label>
+                    <select id="concurrency" style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; background: white; cursor: pointer; transition: all 0.1s;">
+                        <option value="1">1 个（最稳定）</option>
+                        <option value="3">3 个（推荐）</option>
+                        <option value="5" selected>5 个（推荐）</option>
+                        <option value="10">10 个</option>
+                        <option value="15">15 个</option>
+                        <option value="20">20 个（高并发，可能不稳定）</option>
+                        <option value="30">30 个（高并发，可能不稳定）</option>
+                        <option value="50">50 个（极高并发，不推荐）</option>
+                    </select>
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                        💡 提示：高并发可能导致检测失误，建议使用 3-10 个并发数以获得最佳稳定性
+                    </small>
+                </div>
+                <div class="input-group">
+                    <label for="urlList">URL列表（每行一个，支持完整URL或路径，如：example.com/path/file.php）</label>
+                    <textarea id="urlList" placeholder="example.com/path1/file.php&#10;example.com/path2/file.php&#10;https://another.com/path3"></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary" id="startBtn" onclick="startChecking()">开始检查</button>
+                    <button class="btn-secondary" id="stopBtn" onclick="stopChecking()" disabled>停止检查</button>
+                    <button class="btn-secondary" onclick="clearResults()">清空结果</button>
+                    <button class="btn-secondary" id="copyBtn" onclick="copySuccessUrls()" style="display: none;">复制成功域名</button>
+                </div>
+            </div>
+
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <h3 id="totalCount">0</h3>
+                    <p>总数</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="checkedCount">0</h3>
+                    <p>已检查</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="successCount">0</h3>
+                    <p>成功 (2xx)</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="errorCount">0</h3>
+                    <p>失败</p>
+                </div>
+            </div>
+
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="filter-section" id="filterSection" style="display: none; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: #333;">筛选结果：</span>
+                    <button class="filter-btn active" data-filter="all" onclick="filterResults('all')">全部</button>
+                    <button class="filter-btn" data-filter="success" onclick="filterResults('success')">成功 (2xx)</button>
+                    <button class="filter-btn" data-filter="error" onclick="filterResults('error')">失败</button>
+                    <button class="filter-btn" data-filter="redirect" onclick="filterResults('redirect')">重定向 (3xx)</button>
+                </div>
+            </div>
+
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        let isChecking = false;
+        let currentIndex = 0;
+        let urlArray = [];
+        let checkingCount = 0; // 当前正在检查的数量
+        let successUrls = []; // 成功的URL列表
+        let stats = {
+            total: 0,
+            checked: 0,
+            success: 0,
+            error: 0
+        };
+
+        function startChecking() {
+            const urlList = document.getElementById('urlList').value.trim();
+            
+            if (!urlList) {
+                alert('请输入URL列表！');
+                return;
+            }
+
+            // 解析URL列表（不添加协议，让后端处理）
+            urlArray = urlList.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => {
+                    // 如果是完整URL（包含协议），直接使用
+                    if (line.startsWith('http://') || line.startsWith('https://')) {
+                        return line;
+                    }
+                    // 如果没有协议，保持原样，让后端自动处理
+                    return line;
+                });
+
+            if (urlArray.length === 0) {
+                alert('没有有效的URL！');
+                return;
+            }
+
+            // 重置状态
+            isChecking = true;
+            currentIndex = 0;
+            checkingCount = 0;
+            successUrls = [];
+            stats = {
+                total: urlArray.length,
+                checked: 0,
+                success: 0,
+                error: 0
+            };
+
+            // 清空结果
+            document.getElementById('results').innerHTML = '';
+            
+            // 显示统计和进度条
+            document.getElementById('stats').style.display = 'flex';
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('filterSection').style.display = 'block';
+            document.getElementById('copyBtn').style.display = 'none';
+            
+            // 重置筛选
+            currentFilter = 'all';
+            resultStatusMap = {};
+            updateFilterButtons();
+            
+            // 更新按钮状态
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+
+            // 开始并发检查
+            const concurrency = parseInt(document.getElementById('concurrency').value) || 5;
+            startConcurrentCheck(concurrency);
+        }
+
+        function stopChecking() {
+            isChecking = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function clearResults() {
+            if (isChecking) {
+                if (!confirm('正在检查中，确定要清空结果吗？')) {
+                    return;
+                }
+                stopChecking();
+            }
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('filterSection').style.display = 'none';
+            document.getElementById('copyBtn').style.display = 'none';
+            stats = { total: 0, checked: 0, success: 0, error: 0 };
+            successUrls = [];
+            resultStatusMap = {};
+            currentFilter = 'all';
+            updateStats();
+        }
+
+        // 并发检查函数
+        async function startConcurrentCheck(concurrency) {
+            // 先创建所有结果项
+            for (let i = 0; i < urlArray.length; i++) {
+                const url = urlArray[i];
+                const resultId = 'result-' + i;
+                
+                // 确定显示的URL（如果有协议则显示，否则显示原始URL）
+                let displayUrl = url;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    displayUrl = 'http://' + url; // 默认显示http，实际检查时会自动尝试
+                }
+                
+                const resultItem = document.createElement('div');
+                resultItem.id = resultId;
+                resultItem.className = 'result-item checking';
+                resultItem.setAttribute('data-status', 'checking'); // 设置初始状态为检查中
+                resultItem.innerHTML = `
+                    <div class="result-url">
+                        <a href="${escapeHtml(displayUrl)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; cursor: pointer;">
+                            ${escapeHtml(displayUrl)}
+                        </a>
+                    </div>
+                    <div class="result-status status-checking">
+                        <span class="loading"></span> 检查中...
+                    </div>
+                `;
+                document.getElementById('results').appendChild(resultItem);
+            }
+            
+            // 并发执行检查任务（添加延迟和重试机制）
+            const tasks = [];
+            for (let i = 0; i < urlArray.length; i += concurrency) {
+                const batch = urlArray.slice(i, i + concurrency);
+                
+                // 在批次内添加小延迟，错开请求时间（避免同时发起过多连接）
+                const batchPromises = batch.map((url, batchIndex) => {
+                    const index = i + batchIndex;
+                    const resultId = 'result-' + index;
+                    // 每个请求延迟 50-200ms，错开请求时间
+                    const delay = batchIndex * Math.max(50, 200 / concurrency);
+                    return new Promise(resolve => {
+                        setTimeout(() => {
+                            resolve(checkUrlWithRetry(url, resultId, index, 2)); // 最多重试2次
+                        }, delay);
+                    });
+                });
+                
+                tasks.push(Promise.all(batchPromises));
+                
+                // 等待当前批次完成后再继续下一批次
+                await Promise.all(batchPromises);
+                
+                // 批次之间添加延迟，避免请求过于密集
+                if (i + concurrency < urlArray.length && isChecking) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // 批次间延迟100ms
+                }
+                
+                if (!isChecking) break;
+            }
+            
+            // 检查完成
+            if (isChecking) {
+                isChecking = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                if (successUrls.length > 0) {
+                    document.getElementById('copyBtn').style.display = 'inline-block';
+                }
+            }
+        }
+
+        // 带重试机制的检查函数
+        async function checkUrlWithRetry(url, resultId, index, maxRetries = 2) {
+            if (!isChecking) return;
+            
+            let lastError = null;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                if (!isChecking) return;
+                
+                // 重试前等待（指数退避）
+                if (attempt > 0) {
+                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 3000); // 最多等待3秒
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                
+                try {
+                    const result = await checkUrl(url, resultId, index, attempt === maxRetries);
+                    // 如果成功或明确失败（非临时错误），直接返回
+                    if (result && (result.status > 0 || result.isFinal)) {
+                        return result;
+                    }
+                    lastError = result;
+                } catch (error) {
+                    lastError = {
+                        status: 0,
+                        message: '请求失败: ' + error.message,
+                        isFinal: attempt === maxRetries
+                    };
+                }
+            }
+            
+            // 所有重试都失败
+            if (lastError) {
+                updateResult(resultId, url, lastError, url);
+                stats.error++;
+                stats.checked++;
+                updateStats();
+                updateProgress();
+            }
+        }
+
+        // 检查单个URL（支持HTTP失败后自动尝试HTTPS）
+        async function checkUrl(url, resultId, index, isFinalAttempt = false) {
+            if (!isChecking) return null;
+            
+            let finalUrl = url; // 记录最终使用的完整URL（包含协议）
+            let usedProtocol = 'http'; // 记录使用的协议
+            
+            try {
+                // 先尝试HTTP
+                let response;
+                try {
+                    // 增加超时时间和重试逻辑
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25秒超时
+                    
+                    response = await fetch('/check_status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            url: url,
+                            protocol: 'http',
+                            autoRetry: true // 告诉后端如果失败可以自动尝试HTTPS
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                } catch (fetchError) {
+                    // 如果无法连接到服务器
+                    if (fetchError.name === 'AbortError' || 
+                        fetchError.message.includes('Failed to fetch') || 
+                        fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
+                        fetchError.message.includes('NetworkError')) {
+                        // 临时错误，可以重试
+                        if (!isFinalAttempt) {
+                            return {
+                                status: 0,
+                                message: '连接超时或失败（将重试）',
+                                isFinal: false
+                            };
+                        }
+                        // 最后一次尝试，返回最终错误
+                        updateResult(resultId, url, {
+                            status: 0,
+                            message: '无法连接到服务器',
+                            isFinal: true
+                        }, finalUrl);
+                        stats.error++;
+                        stats.checked++;
+                        updateStats();
+                        updateProgress();
+                        return {
+                            status: 0,
+                            message: '无法连接到服务器',
+                            isFinal: true
+                        };
+                    }
+                    throw fetchError;
+                }
+
+                let data = await response.json();
+                
+                // 如果URL没有协议前缀，需要判断是否需要尝试HTTPS
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    // 如果HTTP失败（连接失败或4xx错误），尝试HTTPS
+                    let shouldTryHttps = false;
+                    
+                    if (data.status === 0) {
+                        // HTTP连接失败，尝试HTTPS
+                        shouldTryHttps = true;
+                    } else if (data.status >= 400 && data.status < 500) {
+                        // HTTP返回4xx错误（可能是HTTPS站点），尝试HTTPS
+                        shouldTryHttps = true;
+                    }
+                    
+                    if (shouldTryHttps) {
+                        usedProtocol = 'https';
+                        finalUrl = 'https://' + url;
+                        // 尝试HTTPS
+                        try {
+                            const httpsController = new AbortController();
+                            const httpsTimeoutId = setTimeout(() => httpsController.abort(), 25000);
+                            
+                            response = await fetch('/check_status', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ 
+                                    url: url,
+                                    protocol: 'https'
+                                }),
+                                signal: httpsController.signal
+                            });
+                            
+                            clearTimeout(httpsTimeoutId);
+                            const httpsData = await response.json();
+                            
+                            // 如果HTTPS成功（2xx或3xx），使用HTTPS的结果
+                            if (httpsData.status >= 200 && httpsData.status < 400) {
+                                data = httpsData;
+                            } else if (httpsData.status === 0) {
+                                // HTTPS也连接失败，保持HTTP的错误信息
+                                // data保持不变
+                            } else {
+                                // HTTPS返回其他错误，使用HTTPS的结果
+                                data = httpsData;
+                            }
+                        } catch (fetchError) {
+                            // 如果无法连接到服务器，使用之前的错误信息
+                            if (fetchError.name === 'AbortError' || 
+                                fetchError.message.includes('Failed to fetch') || 
+                                fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
+                                fetchError.message.includes('NetworkError')) {
+                                // 如果是临时错误且不是最后一次尝试，返回以便重试
+                                if (!isFinalAttempt) {
+                                    return {
+                                        status: 0,
+                                        message: '连接超时或失败（将重试）',
+                                        isFinal: false
+                                    };
+                                }
+                                data = {
+                                    status: 0,
+                                    message: '无法连接到服务器',
+                                    isFinal: true
+                                };
+                            } else {
+                                throw fetchError;
+                            }
+                        }
+                    } else {
+                        // HTTP成功，构建完整URL
+                        finalUrl = 'http://' + url;
+                    }
+                } else if (url.startsWith('http://')) {
+                    finalUrl = url;
+                } else if (url.startsWith('https://')) {
+                    finalUrl = url;
+                }
+                
+                // 判断是否为临时错误（可以重试）
+                const isTemporaryError = data.status === 0 && (
+                    data.message.includes('请求超时') || 
+                    data.message.includes('连接超时') ||
+                    data.errorCode === 'ETIMEDOUT' ||
+                    data.errorCode === 'ECONNRESET'
+                );
+                
+                // 如果是临时错误且不是最后一次尝试，返回以便重试
+                if (isTemporaryError && !isFinalAttempt) {
+                    return {
+                        status: 0,
+                        message: data.message + '（将重试）',
+                        isFinal: false
+                    };
+                }
+                
+                // 更新结果，传入完整URL
+                updateResult(resultId, url, data, finalUrl);
+                
+                // 更新统计和成功列表
+                if (data.status >= 200 && data.status < 300) {
+                    stats.success++;
+                    successUrls.push(finalUrl);
+                } else {
+                    stats.error++;
+                }
+                
+                stats.checked++;
+                updateStats();
+                updateProgress();
+                
+                // 返回结果
+                return {
+                    ...data,
+                    isFinal: true
+                };
+            } catch (error) {
+                // 处理错误
+                const errorResult = {
+                    status: 0,
+                    message: '请求失败: ' + error.message,
+                    isFinal: isFinalAttempt
+                };
+                
+                // 如果是最后一次尝试，更新结果
+                if (isFinalAttempt) {
+                    updateResult(resultId, url, errorResult, finalUrl);
+                    stats.error++;
+                    stats.checked++;
+                    updateStats();
+                    updateProgress();
+                }
+                
+                return errorResult;
+            }
+        }
+
+        function updateResult(resultId, url, data, finalUrl = null) {
+            const resultItem = document.getElementById(resultId);
+            if (!resultItem) return;
+
+            let statusClass = 'error';
+            let statusText = '错误';
+            let statusCodeClass = 'status-error';
+            let filterType = 'error'; // 用于筛选的类型
+
+            if (data.status >= 200 && data.status < 300) {
+                statusClass = 'success';
+                statusText = '成功';
+                statusCodeClass = 'status-200';
+                filterType = 'success';
+            } else if (data.status >= 300 && data.status < 400) {
+                statusClass = 'redirect';
+                statusText = '重定向';
+                statusCodeClass = 'status-3xx';
+                filterType = 'redirect';
+            } else if (data.status >= 400 && data.status < 500) {
+                statusClass = 'error';
+                statusText = '客户端错误';
+                statusCodeClass = 'status-4xx';
+                filterType = 'error';
+            } else if (data.status >= 500) {
+                statusClass = 'error';
+                statusText = '服务器错误';
+                statusCodeClass = 'status-5xx';
+                filterType = 'error';
+            } else if (data.status === 0) {
+                filterType = 'error';
+            }
+
+            // 记录结果状态
+            resultStatusMap[resultId] = filterType;
+
+            // 确定显示的URL（如果有finalUrl则使用，否则使用原始url）
+            let displayUrl = finalUrl || url;
+            // 如果displayUrl没有协议，根据状态判断（成功通常是https，失败可能是http）
+            if (!displayUrl.startsWith('http://') && !displayUrl.startsWith('https://')) {
+                // 如果状态码为0（连接失败），可能是http失败，尝试https
+                if (data.status === 0) {
+                    displayUrl = 'https://' + displayUrl;
+                } else {
+                    displayUrl = 'http://' + displayUrl;
+                }
+            }
+
+            resultItem.className = 'result-item ' + statusClass;
+            resultItem.setAttribute('data-status', filterType);
+            resultItem.innerHTML = `
+                <div class="result-url">
+                    <a href="${escapeHtml(displayUrl)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; cursor: pointer;">
+                        ${escapeHtml(displayUrl)}
+                    </a>
+                </div>
+                <div class="result-status ${statusCodeClass}">
+                    ${data.status || 'N/A'} ${data.message ? ' - ' + escapeHtml(data.message) : ''}
+                </div>
+            `;
+            
+            // 应用当前筛选
+            applyFilter();
+        }
+
+        // 筛选结果
+        function filterResults(filterType) {
+            currentFilter = filterType;
+            updateFilterButtons();
+            applyFilter();
+        }
+
+        // 更新筛选按钮状态
+        function updateFilterButtons() {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-filter') === currentFilter) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // 应用筛选
+        function applyFilter() {
+            const resultItems = document.querySelectorAll('.result-item');
+            resultItems.forEach(item => {
+                const status = item.getAttribute('data-status');
+                if (currentFilter === 'all') {
+                    item.classList.remove('hidden');
+                } else if (currentFilter === 'success') {
+                    if (status === 'success') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                } else if (currentFilter === 'error') {
+                    if (status === 'error') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                } else if (currentFilter === 'redirect') {
+                    if (status === 'redirect') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('totalCount').textContent = stats.total;
+            document.getElementById('checkedCount').textContent = stats.checked;
+            document.getElementById('successCount').textContent = stats.success;
+            document.getElementById('errorCount').textContent = stats.error;
+        }
+
+        function updateProgress() {
+            const percentage = stats.total > 0 ? (stats.checked / stats.total) * 100 : 0;
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面加载时检查服务器连接
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 检查是否通过服务器访问（不是file://协议）
+            if (window.location.protocol === 'file:') {
+                alert('请通过服务器访问此页面！\n\n请先启动服务器：\nnode server.js\n\n然后在浏览器中访问：\nhttp://localhost:3000');
+                return;
+            }
+            
+            // 尝试连接服务器
+            try {
+                const response = await fetch('/check_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        url: 'test',
+                        protocol: 'http'
+                    })
+                });
+                // 服务器正常
+            } catch (error) {
+                // 如果无法连接，显示提示
+                if (error.message.includes('Failed to fetch') || 
+                    error.message.includes('ERR_CONNECTION_REFUSED') ||
+                    error.message.includes('NetworkError')) {
+                    console.warn('无法连接到服务器，请确保服务器正在运行');
+                    // 在页面上显示提示
+                    const warningDiv = document.createElement('div');
+                    warningDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #ffc107; color: #000; padding: 15px; text-align: center; z-index: 10000; font-weight: bold;';
+                    warningDiv.innerHTML = '⚠️ 无法连接到服务器！请确保服务器正在运行（运行命令：node server.js）';
+                    document.body.insertBefore(warningDiv, document.body.firstChild);
+                }
+            }
+        });
+
+        // 复制成功的域名
+        function copySuccessUrls() {
+            if (successUrls.length === 0) {
+                alert('没有成功的域名！');
+                return;
+            }
+            
+            const text = successUrls.join('\n');
+            
+            // 使用现代API复制到剪贴板
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert(`已复制 ${successUrls.length} 个成功的域名到剪贴板！`);
+                }).catch(err => {
+                    // 降级方案
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                // 降级方案
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        // 降级复制方案
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert(`已复制 ${successUrls.length} 个成功的域名到剪贴板！`);
+                } else {
+                    alert('复制失败，请手动复制：\n' + text);
+                }
+            } catch (err) {
+                alert('复制失败，请手动复制：\n' + text);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>
+

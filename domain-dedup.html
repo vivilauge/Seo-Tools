@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>域名重复检测 - Seo-Tools</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px 30px;
+            overflow: hidden;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            margin: -40px -30px 30px -30px;
+        }
+
+        .header-section .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            opacity: 0.9;
+            transition: opacity 0.1s;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .header-section .back-link:hover {
+            opacity: 1;
+        }
+
+        .header-section h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-section .description {
+            font-size: 18px;
+            opacity: 0.9;
+            color: white;
+            margin-bottom: 0;
+        }
+
+        .input-section {
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            transition: all 0.1s;
+        }
+
+        .input-group:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group label::before {
+            content: '🔗';
+            font-size: 18px;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            resize: vertical;
+            transition: all 0.1s;
+            background: white;
+            line-height: 1.6;
+            min-height: 200px;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: #fafbff;
+        }
+
+        .keyword-count {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .keyword-count span {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .options-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .option-item label {
+            margin: 0;
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .result-section {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 3px solid #e9ecef;
+        }
+
+        .result-section h2 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 2em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-section h2::before {
+            content: '✅';
+            font-size: 1.2em;
+        }
+
+        .result-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            transition: all 0.1s;
+        }
+
+        .info-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-item.highlight {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+            border: 2px solid #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            line-height: 1;
+        }
+
+        .info-item.highlight .info-value {
+            font-size: 36px;
+        }
+
+        .result-content {
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            margin-bottom: 30px;
+        }
+
+        .result-content label {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-content label::before {
+            content: '📋';
+            font-size: 18px;
+        }
+
+        .result-content textarea {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            resize: vertical;
+            background: white;
+            line-height: 1.6;
+            transition: all 0.1s;
+            min-height: 200px;
+        }
+
+        .result-content textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .duplicate-list {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            list-style: none;
+        }
+
+        .duplicate-list li {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.1s;
+        }
+
+        .duplicate-list li:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .duplicate-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            .result-info {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+
+            .header-section {
+                padding: 30px 20px;
+                margin: -20px -20px 20px -20px;
+            }
+
+            .header-section h1 {
+                font-size: 28px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <a href="index.html" class="back-link">← 返回首页</a>
+            <h1>🔗 域名重复检测</h1>
+            <p class="description">去掉域名的协议头、路径和参数，提取纯域名后去重</p>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="urlList">URL列表（每行一个）</label>
+                <textarea 
+                    id="urlList" 
+                    placeholder="请输入URL列表，每行一个&#10;例如：&#10;https://www.example.com/path1/page.html?param=value&#10;http://example.com/path2/index.php?id=123&#10;https://sub.example.com/path3&#10;www.example.com/path4?key=value"
+                    rows="10"
+                ></textarea>
+                <div class="keyword-count">URL数量: <span id="urlCount">0</span></div>
+            </div>
+        </div>
+
+        <div class="options-group">
+            <div class="option-item">
+                <input type="checkbox" id="keepOriginalFormat" checked>
+                <label for="keepOriginalFormat">保留原格式（返回完整URL，否则只返回纯域名）</label>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="processBtn" class="btn btn-primary">开始检测</button>
+            <button id="clearBtn" class="btn btn-secondary">清空</button>
+            <button id="copyBtn" class="btn btn-success" style="display: none;">复制结果</button>
+        </div>
+        
+        <div class="result-section" id="resultSection" style="display: none;">
+            <h2>检测结果</h2>
+            <div class="result-info">
+                <div class="info-item">
+                    <span class="info-label">原始URL数量:</span>
+                    <span class="info-value" id="originalCount">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">唯一域名数量:</span>
+                    <span class="info-value" id="uniqueCount">0</span>
+                </div>
+                <div class="info-item highlight">
+                    <span class="info-label">重复域名数量:</span>
+                    <span class="info-value" id="duplicateCount">0</span>
+                </div>
+            </div>
+            
+            <div class="result-content">
+                <label for="resultList" id="resultLabel">去重后的域名列表:</label>
+                <textarea id="resultList" readonly></textarea>
+            </div>
+
+            <div class="result-content">
+                <label>重复域名详情:</label>
+                <ul class="duplicate-list" id="duplicateList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlListInput = document.getElementById('urlList');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultList = document.getElementById('resultList');
+        const urlCount = document.getElementById('urlCount');
+        const originalCount = document.getElementById('originalCount');
+        const uniqueCount = document.getElementById('uniqueCount');
+        const duplicateCount = document.getElementById('duplicateCount');
+        const duplicateList = document.getElementById('duplicateList');
+        const keepOriginalFormat = document.getElementById('keepOriginalFormat');
+        const resultLabel = document.getElementById('resultLabel');
+
+        // 提取纯域名（去掉协议、路径和参数）
+        function extractDomain(url) {
+            const trimmed = url.trim();
+            if (!trimmed) return null;
+
+            // 去掉协议头
+            let domain = trimmed
+                .replace(/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//, '')
+                .replace(/^\/\//, '');
+
+            // 去掉查询参数（? 后面的所有内容）
+            const questionIndex = domain.indexOf('?');
+            if (questionIndex !== -1) {
+                domain = domain.slice(0, questionIndex);
+            }
+
+            // 去掉路径（第一个斜杠之后的所有内容）
+            const slashIndex = domain.indexOf('/');
+            if (slashIndex !== -1) {
+                domain = domain.slice(0, slashIndex);
+            }
+
+            // 去掉端口号
+            const colonIndex = domain.indexOf(':');
+            if (colonIndex !== -1) {
+                domain = domain.slice(0, colonIndex);
+            }
+
+            return domain.toLowerCase();
+        }
+
+        // 解析URL列表
+        function parseUrls(text) {
+            return text
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+        }
+
+        // 更新URL计数
+        function updateCount() {
+            const urls = parseUrls(urlListInput.value);
+            urlCount.textContent = urls.length;
+        }
+
+        // 处理域名去重
+        function processDomains() {
+            const urlText = urlListInput.value.trim();
+            
+            if (!urlText) {
+                alert('请输入URL列表！');
+                return;
+            }
+
+            const urls = parseUrls(urlText);
+            const originalCountValue = urls.length;
+
+            // 提取域名并统计
+            const domainMap = new Map(); // domain -> [originalUrls]
+            const domainCount = new Map(); // domain -> count
+
+            urls.forEach(url => {
+                const domain = extractDomain(url);
+                if (!domain) return;
+
+                if (!domainMap.has(domain)) {
+                    domainMap.set(domain, []);
+                    domainCount.set(domain, 0);
+                }
+                domainMap.get(domain).push(url);
+                domainCount.set(domain, domainCount.get(domain) + 1);
+            });
+
+            // 获取唯一域名列表（每个域名只保留第一个URL）
+            const uniqueDomains = [];
+            const uniqueDomainsOnly = []; // 纯域名列表
+            const duplicateDomains = [];
+
+            domainMap.forEach((originalUrls, domain) => {
+                if (domainCount.get(domain) === 1) {
+                    uniqueDomains.push(originalUrls[0]);
+                    uniqueDomainsOnly.push(domain);
+                } else {
+                    // 有重复的域名，保留第一个，记录其他重复的
+                    uniqueDomains.push(originalUrls[0]);
+                    uniqueDomainsOnly.push(domain);
+                    duplicateDomains.push({
+                        domain: domain,
+                        count: domainCount.get(domain),
+                        urls: originalUrls
+                    });
+                }
+            });
+
+            // 根据选项显示结果
+            const keepFormat = keepOriginalFormat.checked;
+            if (keepFormat) {
+                resultList.value = uniqueDomains.join('\n');
+                resultLabel.textContent = '去重后的URL列表（保留原格式）:';
+            } else {
+                resultList.value = uniqueDomainsOnly.join('\n');
+                resultLabel.textContent = '去重后的域名列表（纯域名）:';
+            }
+
+            // 更新统计信息
+            originalCount.textContent = originalCountValue;
+            uniqueCount.textContent = uniqueDomains.length;
+            duplicateCount.textContent = duplicateDomains.length;
+
+            // 显示重复域名详情
+            duplicateList.innerHTML = '';
+            if (duplicateDomains.length === 0) {
+                duplicateList.innerHTML = '<li>没有重复的域名。</li>';
+            } else {
+                duplicateDomains.sort((a, b) => b.count - a.count).forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${item.domain}</strong>（出现 ${item.count} 次）：<br>${item.urls.map(u => `&nbsp;&nbsp;• ${u}`).join('<br>')}`;
+                    duplicateList.appendChild(li);
+                });
+            }
+
+            // 显示结果区域
+            resultSection.style.display = 'block';
+            copyBtn.style.display = 'inline-block';
+            resultSection.scrollIntoView({ block: 'nearest' });
+        }
+
+        // 清空所有输入和结果
+        function clearAll() {
+            urlListInput.value = '';
+            resultList.value = '';
+            duplicateList.innerHTML = '';
+            resultSection.style.display = 'none';
+            copyBtn.style.display = 'none';
+            updateCount();
+            urlListInput.focus();
+        }
+
+        // 复制结果到剪贴板
+        function copyResult() {
+            const result = resultList.value;
+            if (!result) {
+                alert('没有可复制的内容！');
+                return;
+            }
+
+            resultList.select();
+            document.execCommand('copy');
+
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '已复制！';
+            copyBtn.style.background = '#059669';
+
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.style.background = '';
+            }, 2000);
+        }
+
+        // 事件监听
+        urlListInput.addEventListener('input', updateCount);
+        processBtn.addEventListener('click', processDomains);
+        clearBtn.addEventListener('click', clearAll);
+        copyBtn.addEventListener('click', copyResult);
+
+        // 支持Ctrl+Enter快捷键处理
+        urlListInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                processDomains();
+            }
+        });
+
+        // 初始化计数
+        updateCount();
+    </script>
+</body>
+</html>
+

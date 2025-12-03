@@ -68,12 +68,16 @@ function checkUrlStatus(targetUrl, protocol = 'http') {
             port: parsedUrl.port || (finalUrl.startsWith('https://') ? 443 : 80),
             path: parsedUrl.pathname + parsedUrl.search,
             method: 'GET',
-            timeout: 10000, // 10秒超时
+            timeout: 20000, // 20秒超时（高并发时需要更长时间）
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Connection': 'keep-alive'
             },
             // 不验证SSL证书（可根据需要修改）
-            rejectUnauthorized: false
+            rejectUnauthorized: false,
+            // 增加连接池大小
+            keepAlive: true,
+            keepAliveMsecs: 1000
         };
 
         const req = httpModule.request(options, (res) => {
@@ -97,15 +101,23 @@ function checkUrlStatus(targetUrl, protocol = 'http') {
         req.on('error', (error) => {
             let errorMessage = error.message || '未知错误';
             
-            // 常见错误码转换
+            // 常见错误码转换（更详细的错误信息）
             if (error.code === 'ECONNREFUSED') {
-                errorMessage = '无法连接到服务器';
-            } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
-                errorMessage = '请求超时';
+                errorMessage = '无法连接到服务器（连接被拒绝）';
+            } else if (error.code === 'ETIMEDOUT') {
+                errorMessage = '请求超时（连接超时）';
+            } else if (error.code === 'ECONNRESET') {
+                errorMessage = '连接被重置（可能是服务器限制或网络不稳定）';
             } else if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
-                errorMessage = '无法解析域名';
+                errorMessage = '无法解析域名（DNS解析失败）';
             } else if (error.code === 'CERT_HAS_EXPIRED' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
                 errorMessage = 'SSL证书错误';
+            } else if (error.code === 'EHOSTUNREACH') {
+                errorMessage = '主机不可达';
+            } else if (error.code === 'ENETUNREACH') {
+                errorMessage = '网络不可达';
+            } else if (error.code === 'EPIPE') {
+                errorMessage = '管道错误（连接中断）';
             }
 
             resolve({
