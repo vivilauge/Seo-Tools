@@ -430,8 +430,11 @@
                     </small>
                 </div>
                 <div class="input-group">
-                    <label for="urlList">URL列表（每行一个，必须包含完整协议，如：https://example.com/path）</label>
-                    <textarea id="urlList" placeholder="https://example.com/api/test&#10;https://another.com/status&#10;https://api.test.com/endpoint"></textarea>
+                    <label for="urlList">URL列表（每行一个，支持完整URL或域名，如：https://example.com/path 或 http://example.com/api）</label>
+                    <textarea id="urlList" placeholder="https://example.com/api/test&#10;http://another.com/status&#10;api.test.com/endpoint&#10;example.com/path"></textarea>
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                        💡 提示：支持HTTP和HTTPS协议，不带协议的URL会自动添加http://前缀。HTTPS页面检测HTTP资源会使用多种方法确保兼容性。
+                    </small>
                 </div>
                 <div class="button-group">
                     <button class="btn-primary" id="startBtn" onclick="startChecking()">开始检查</button>
@@ -452,7 +455,7 @@
                 </div>
                 <div class="stat-card">
                     <h3 id="successCount">0</h3>
-                    <p>成功 (2xx)</p>
+                    <p>成功</p>
                 </div>
                 <div class="stat-card">
                     <h3 id="errorCount">0</h3>
@@ -469,6 +472,8 @@
                     <span style="font-weight: 600; color: #333;">筛选结果：</span>
                     <button class="filter-btn active" data-filter="all" onclick="filterResults('all')">全部</button>
                     <button class="filter-btn" data-filter="success" onclick="filterResults('success')">成功 (2xx)</button>
+                    <button class="filter-btn" data-filter="http-success" onclick="filterResults('http-success')">HTTP连接成功</button>
+                    <button class="filter-btn" data-filter="image-check" onclick="filterResults('image-check')">图片检测</button>
                     <button class="filter-btn" data-filter="error" onclick="filterResults('error')">失败</button>
                     <button class="filter-btn" data-filter="cors-limited" onclick="filterResults('cors-limited')">CORS受限</button>
                     <button class="filter-btn" data-filter="redirect" onclick="filterResults('redirect')">重定向 (3xx)</button>
@@ -505,10 +510,9 @@
                 .map(line => line.trim())
                 .filter(line => line.length > 0)
                 .map(line => {
-                    // 必须包含协议
+                    // 如果没有协议，自动添加http://
                     if (!line.startsWith('http://') && !line.startsWith('https://')) {
-                        alert('所有URL必须包含完整协议（http:// 或 https://）\n\n示例：https://example.com/path');
-                        throw new Error('Invalid URL format');
+                        return 'http://' + line;
                     }
                     return line;
                 });
@@ -653,42 +657,75 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    mode: 'cors', // 强制CORS模式
+                // 根据协议选择不同的fetch模式
+                const isHttp = url.startsWith('http://');
+                const fetchOptions = {
+                    method: 'HEAD', // 使用HEAD请求，只获取响应头，不获取内容
                     cache: 'no-cache',
                     signal: controller.signal,
                     headers: {
                         'Accept': 'text/html,application/json,*/*',
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     }
-                });
+                };
+
+                // 对于http协议，使用no-cors模式以避免CORS问题
+                // 对于https协议，使用cors模式
+                if (isHttp) {
+                    fetchOptions.mode = 'no-cors';
+                } else {
+                    fetchOptions.mode = 'cors';
+                }
+
+                const response = await fetch(url, fetchOptions);
 
                 clearTimeout(timeoutId);
 
-                // 成功获取响应
-                const statusCode = response.status;
-                let statusMessage = response.statusText || getStatusMessage(statusCode);
+                // 处理响应
+                const isHttpProtocol = url.startsWith('http://');
 
-                let result = {
-                    status: statusCode,
-                    message: statusMessage,
-                    corsSupported: true
-                };
+                if (isHttpProtocol) {
+                    // HTTP协议使用no-cors模式，无法读取详细状态码
+                    // 但是fetch成功说明连接是可达的
+                    let result = {
+                        status: 200, // 假设成功，因为fetch没有抛出错误
+                        message: 'HTTP连接成功（no-cors模式）',
+                        corsSupported: false,
+                        isHttp: true
+                    };
 
-                // 更新结果
-                updateResult(resultId, url, result, url);
+                    // 更新结果
+                    updateResult(resultId, url, result, url);
 
-                // 更新统计
-                if (statusCode >= 200 && statusCode < 300) {
+                    // 更新统计
                     stats.success++;
                     successUrls.push(url);
                 } else {
-                    stats.error++;
+                    // HTTPS协议可以读取详细状态码
+                    const statusCode = response.status;
+                    let statusMessage = response.statusText || getStatusMessage(statusCode);
+
+                    let result = {
+                        status: statusCode,
+                        message: statusMessage,
+                        corsSupported: true
+                    };
+
+                    // 更新结果
+                    updateResult(resultId, url, result, url);
+
+                    // 更新统计
+                    if (statusCode >= 200 && statusCode < 300) {
+                        stats.success++;
+                        successUrls.push(url);
+                    } else {
+                        stats.error++;
+                    }
                 }
 
             } catch (error) {
                 // 处理各种错误情况
+                const isHttpProtocolError = url.startsWith('http://');
                 let errorResult = {
                     status: 0,
                     message: '检查失败',
@@ -697,13 +734,17 @@
 
                 if (error.name === 'AbortError') {
                     errorResult.message = '请求超时（15秒）';
-                } else if (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin')) {
-                    errorResult.message = 'CORS跨域限制 - 网站不支持跨域访问';
-                    errorResult.corsLimited = true;
                 } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                     errorResult.message = '网络错误 - 无法连接到服务器';
                 } else if (error.message.includes('TypeError')) {
                     errorResult.message = '无效URL或网络不可达';
+                } else if (isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin') || error.message.includes('Mixed Content'))) {
+                    // HTTP协议在HTTPS页面中可能遇到混合内容限制，尝试备用方法
+                    await checkHttpWithImage(url, resultId, index);
+                    return; // 备用方法会处理结果更新
+                } else if (!isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
+                    errorResult.message = 'HTTPS跨域限制 - 网站不支持跨域访问';
+                    errorResult.corsLimited = true;
                 } else {
                     errorResult.message = '未知错误: ' + error.message;
                 }
@@ -720,6 +761,78 @@
             updateProgress();
         }
 
+        // 使用Image对象检测HTTP URL连接性（绕过混合内容限制）
+        function checkHttpWithImage(url, resultId, index) {
+            return new Promise((resolve) => {
+                if (!isChecking) {
+                    resolve();
+                    return;
+                }
+
+                const img = new Image();
+                const timeout = setTimeout(() => {
+                    // 超时处理
+                    const errorResult = {
+                        status: 0,
+                        message: 'HTTP检测超时（15秒）',
+                        corsSupported: false,
+                        isHttp: true,
+                        imageCheck: true
+                    };
+                    updateResult(resultId, url, errorResult, url);
+                    stats.error++;
+                    stats.checked++;
+                    updateStats();
+                    updateProgress();
+                    resolve();
+                }, 15000);
+
+                img.onload = () => {
+                    clearTimeout(timeout);
+                    if (isChecking) {
+                        // 图片加载成功，说明HTTP连接可达
+                        const result = {
+                            status: 200,
+                            message: 'HTTP连接成功（图片检测）',
+                            corsSupported: false,
+                            isHttp: true,
+                            imageCheck: true
+                        };
+                        updateResult(resultId, url, result, url);
+                        stats.success++;
+                        successUrls.push(url);
+                        stats.checked++;
+                        updateStats();
+                        updateProgress();
+                    }
+                    resolve();
+                };
+
+                img.onerror = () => {
+                    clearTimeout(timeout);
+                    if (isChecking) {
+                        // 图片加载失败
+                        const errorResult = {
+                            status: 0,
+                            message: 'HTTP连接失败（图片检测）',
+                            corsSupported: false,
+                            isHttp: true,
+                            imageCheck: true
+                        };
+                        updateResult(resultId, url, errorResult, url);
+                        stats.error++;
+                        stats.checked++;
+                        updateStats();
+                        updateProgress();
+                    }
+                    resolve();
+                };
+
+                // 尝试加载图片（通常服务器会返回404或其他状态，但连接是可达的）
+                img.src = url;
+            });
+        }
+
         function updateResult(resultId, url, data, finalUrl = null) {
             const resultItem = document.getElementById(resultId);
             if (!resultItem) return;
@@ -734,6 +847,18 @@
                 statusText = 'CORS受限';
                 statusCodeClass = 'status-cors-limited';
                 filterType = 'cors-limited';
+            } else if (data.isHttp && data.status === 200 && data.imageCheck) {
+                // 图片检测HTTP连接成功
+                statusClass = 'success';
+                statusText = 'HTTP连接成功';
+                statusCodeClass = 'status-200';
+                filterType = 'image-check';
+            } else if (data.isHttp && data.status === 200) {
+                // HTTP协议连接成功
+                statusClass = 'success';
+                statusText = 'HTTP连接成功';
+                statusCodeClass = 'status-200';
+                filterType = 'http-success';
             } else if (data.status >= 200 && data.status < 300) {
                 statusClass = 'success';
                 statusText = '成功';
@@ -831,6 +956,18 @@
                     item.classList.remove('hidden');
                 } else if (currentFilter === 'success') {
                     if (status === 'success') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                } else if (currentFilter === 'http-success') {
+                    if (status === 'http-success') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                } else if (currentFilter === 'image-check') {
+                    if (status === 'image-check') {
                         item.classList.remove('hidden');
                     } else {
                         item.classList.add('hidden');
