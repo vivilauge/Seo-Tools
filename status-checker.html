@@ -84,6 +84,29 @@
             margin-bottom: 0;
         }
 
+        .warning-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: #856404;
+        }
+
+        .warning-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .warning-section ul {
+            margin-left: 20px;
+        }
+
+        .warning-section li {
+            margin-bottom: 5px;
+        }
+
         .input-section {
             margin-bottom: 30px;
         }
@@ -239,6 +262,11 @@
             background: #d1ecf1;
         }
 
+        .result-item.cors-limited {
+            border-left-color: #6f42c1;
+            background: #e2e3e5;
+        }
+
         .result-url {
             flex: 1;
             font-family: 'Courier New', monospace;
@@ -339,6 +367,11 @@
             color: white;
         }
 
+        .status-cors-limited {
+            background: #6f42c1;
+            color: white;
+        }
+
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -377,29 +410,28 @@
                 <a href="index.html" style="color: white; text-decoration: none; font-size: 14px; opacity: 0.9; transition: opacity 0.1s;">← 返回首页</a>
             </div>
             <h1>🌐 网站状态码批量检查工具</h1>
-            <p class="description">实时检查域名和路径的可访问性</p>
+            <p class="description">批量检查网站URL的状态码，实时显示检查结果</p>
         </div>
+
+
         <div class="content">
             <div class="input-section">
                 <div class="input-group">
                     <label for="concurrency">并发数（同时检查的域名数量）</label>
                     <select id="concurrency" style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; background: white; cursor: pointer; transition: all 0.1s;">
                         <option value="1">1 个（最稳定）</option>
-                        <option value="3">3 个（推荐）</option>
-                        <option value="5" selected>5 个（推荐）</option>
+                        <option value="3" selected>3 个（推荐）</option>
+                        <option value="5">5 个</option>
                         <option value="10">10 个</option>
-                        <option value="15">15 个</option>
-                        <option value="20">20 个（高并发，可能不稳定）</option>
-                        <option value="30">30 个（高并发，可能不稳定）</option>
-                        <option value="50">50 个（极高并发，不推荐）</option>
+                        <option value="15">15 个（可能不稳定）</option>
                     </select>
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
-                        💡 提示：高并发可能导致检测失误，建议使用 3-10 个并发数以获得最佳稳定性
+                        💡 提示：高并发可能导致检测失误，建议使用 3 个并发数
                     </small>
                 </div>
                 <div class="input-group">
-                    <label for="urlList">URL列表（每行一个，支持完整URL或路径，如：example.com/path/file.php）</label>
-                    <textarea id="urlList" placeholder="example.com/path1/file.php&#10;example.com/path2/file.php&#10;https://another.com/path3"></textarea>
+                    <label for="urlList">URL列表（每行一个，必须包含完整协议，如：https://example.com/path）</label>
+                    <textarea id="urlList" placeholder="https://example.com/api/test&#10;https://another.com/status&#10;https://api.test.com/endpoint"></textarea>
                 </div>
                 <div class="button-group">
                     <button class="btn-primary" id="startBtn" onclick="startChecking()">开始检查</button>
@@ -424,7 +456,7 @@
                 </div>
                 <div class="stat-card">
                     <h3 id="errorCount">0</h3>
-                    <p>失败</p>
+                    <p>失败/受限</p>
                 </div>
             </div>
 
@@ -438,6 +470,7 @@
                     <button class="filter-btn active" data-filter="all" onclick="filterResults('all')">全部</button>
                     <button class="filter-btn" data-filter="success" onclick="filterResults('success')">成功 (2xx)</button>
                     <button class="filter-btn" data-filter="error" onclick="filterResults('error')">失败</button>
+                    <button class="filter-btn" data-filter="cors-limited" onclick="filterResults('cors-limited')">CORS受限</button>
                     <button class="filter-btn" data-filter="redirect" onclick="filterResults('redirect')">重定向 (3xx)</button>
                 </div>
             </div>
@@ -461,22 +494,22 @@
 
         function startChecking() {
             const urlList = document.getElementById('urlList').value.trim();
-            
+
             if (!urlList) {
                 alert('请输入URL列表！');
                 return;
             }
 
-            // 解析URL列表（不添加协议，让后端处理）
+            // 解析URL列表
             urlArray = urlList.split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0)
                 .map(line => {
-                    // 如果是完整URL（包含协议），直接使用
-                    if (line.startsWith('http://') || line.startsWith('https://')) {
-                        return line;
+                    // 必须包含协议
+                    if (!line.startsWith('http://') && !line.startsWith('https://')) {
+                        alert('所有URL必须包含完整协议（http:// 或 https://）\n\n示例：https://example.com/path');
+                        throw new Error('Invalid URL format');
                     }
-                    // 如果没有协议，保持原样，让后端自动处理
                     return line;
                 });
 
@@ -499,24 +532,24 @@
 
             // 清空结果
             document.getElementById('results').innerHTML = '';
-            
+
             // 显示统计和进度条
             document.getElementById('stats').style.display = 'flex';
             document.getElementById('progressBar').style.display = 'block';
             document.getElementById('filterSection').style.display = 'block';
             document.getElementById('copyBtn').style.display = 'none';
-            
+
             // 重置筛选
             currentFilter = 'all';
             resultStatusMap = {};
             updateFilterButtons();
-            
+
             // 更新按钮状态
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
 
             // 开始并发检查
-            const concurrency = parseInt(document.getElementById('concurrency').value) || 5;
+            const concurrency = parseInt(document.getElementById('concurrency').value) || 3;
             startConcurrentCheck(concurrency);
         }
 
@@ -551,21 +584,15 @@
             for (let i = 0; i < urlArray.length; i++) {
                 const url = urlArray[i];
                 const resultId = 'result-' + i;
-                
-                // 确定显示的URL（如果有协议则显示，否则显示原始URL）
-                let displayUrl = url;
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    displayUrl = 'http://' + url; // 默认显示http，实际检查时会自动尝试
-                }
-                
+
                 const resultItem = document.createElement('div');
                 resultItem.id = resultId;
                 resultItem.className = 'result-item checking';
                 resultItem.setAttribute('data-status', 'checking'); // 设置初始状态为检查中
                 resultItem.innerHTML = `
                     <div class="result-url">
-                        <a href="${escapeHtml(displayUrl)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; cursor: pointer;">
-                            ${escapeHtml(displayUrl)}
+                        <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; cursor: pointer;">
+                            ${escapeHtml(url)}
                         </a>
                     </div>
                     <div class="result-status status-checking">
@@ -574,38 +601,38 @@
                 `;
                 document.getElementById('results').appendChild(resultItem);
             }
-            
-            // 并发执行检查任务（添加延迟和重试机制）
+
+            // 并发执行检查任务
             const tasks = [];
             for (let i = 0; i < urlArray.length; i += concurrency) {
                 const batch = urlArray.slice(i, i + concurrency);
-                
-                // 在批次内添加小延迟，错开请求时间（避免同时发起过多连接）
+
+                // 在批次内添加小延迟，错开请求时间
                 const batchPromises = batch.map((url, batchIndex) => {
                     const index = i + batchIndex;
                     const resultId = 'result-' + index;
-                    // 每个请求延迟 50-200ms，错开请求时间
-                    const delay = batchIndex * Math.max(50, 200 / concurrency);
+                    // 每个请求延迟 100-300ms，错开请求时间
+                    const delay = batchIndex * Math.max(100, 300 / concurrency);
                     return new Promise(resolve => {
                         setTimeout(() => {
-                            resolve(checkUrlWithRetry(url, resultId, index, 2)); // 最多重试2次
+                            resolve(checkUrl(url, resultId, index));
                         }, delay);
                     });
                 });
-                
+
                 tasks.push(Promise.all(batchPromises));
-                
+
                 // 等待当前批次完成后再继续下一批次
                 await Promise.all(batchPromises);
-                
+
                 // 批次之间添加延迟，避免请求过于密集
                 if (i + concurrency < urlArray.length && isChecking) {
-                    await new Promise(resolve => setTimeout(resolve, 100)); // 批次间延迟100ms
+                    await new Promise(resolve => setTimeout(resolve, 200)); // 批次间延迟200ms
                 }
-                
+
                 if (!isChecking) break;
             }
-            
+
             // 检查完成
             if (isChecking) {
                 isChecking = false;
@@ -617,245 +644,80 @@
             }
         }
 
-        // 带重试机制的检查函数
-        async function checkUrlWithRetry(url, resultId, index, maxRetries = 2) {
+        // 检查单个URL（纯前端实现）
+        async function checkUrl(url, resultId, index) {
             if (!isChecking) return;
-            
-            let lastError = null;
-            for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                if (!isChecking) return;
-                
-                // 重试前等待（指数退避）
-                if (attempt > 0) {
-                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 3000); // 最多等待3秒
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-                
-                try {
-                    const result = await checkUrl(url, resultId, index, attempt === maxRetries);
-                    // 如果成功或明确失败（非临时错误），直接返回
-                    if (result && (result.status > 0 || result.isFinal)) {
-                        return result;
-                    }
-                    lastError = result;
-                } catch (error) {
-                    lastError = {
-                        status: 0,
-                        message: '请求失败: ' + error.message,
-                        isFinal: attempt === maxRetries
-                    };
-                }
-            }
-            
-            // 所有重试都失败
-            if (lastError) {
-                updateResult(resultId, url, lastError, url);
-                stats.error++;
-                stats.checked++;
-                updateStats();
-                updateProgress();
-            }
-        }
 
-        // 检查单个URL（支持HTTP失败后自动尝试HTTPS）
-        async function checkUrl(url, resultId, index, isFinalAttempt = false) {
-            if (!isChecking) return null;
-            
-            let finalUrl = url; // 记录最终使用的完整URL（包含协议）
-            let usedProtocol = 'http'; // 记录使用的协议
-            
             try {
-                // 先尝试HTTP
-                let response;
-                try {
-                    // 增加超时时间和重试逻辑
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25秒超时
-                    
-                    response = await fetch('/check_status', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                            url: url,
-                            protocol: 'http',
-                            autoRetry: true // 告诉后端如果失败可以自动尝试HTTPS
-                        }),
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                } catch (fetchError) {
-                    // 如果无法连接到服务器
-                    if (fetchError.name === 'AbortError' || 
-                        fetchError.message.includes('Failed to fetch') || 
-                        fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
-                        fetchError.message.includes('NetworkError')) {
-                        // 临时错误，可以重试
-                        if (!isFinalAttempt) {
-                            return {
-                                status: 0,
-                                message: '连接超时或失败（将重试）',
-                                isFinal: false
-                            };
-                        }
-                        // 最后一次尝试，返回最终错误
-                        updateResult(resultId, url, {
-                            status: 0,
-                            message: '无法连接到服务器',
-                            isFinal: true
-                        }, finalUrl);
-                        stats.error++;
-                        stats.checked++;
-                        updateStats();
-                        updateProgress();
-                        return {
-                            status: 0,
-                            message: '无法连接到服务器',
-                            isFinal: true
-                        };
-                    }
-                    throw fetchError;
-                }
+                // 使用fetch API直接发起请求
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
 
-                let data = await response.json();
-                
-                // 如果URL没有协议前缀，需要判断是否需要尝试HTTPS
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    // 如果HTTP失败（连接失败或4xx错误），尝试HTTPS
-                    let shouldTryHttps = false;
-                    
-                    if (data.status === 0) {
-                        // HTTP连接失败，尝试HTTPS
-                        shouldTryHttps = true;
-                    } else if (data.status >= 400 && data.status < 500) {
-                        // HTTP返回4xx错误（可能是HTTPS站点），尝试HTTPS
-                        shouldTryHttps = true;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors', // 强制CORS模式
+                    cache: 'no-cache',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'text/html,application/json,*/*',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     }
-                    
-                    if (shouldTryHttps) {
-                        usedProtocol = 'https';
-                        finalUrl = 'https://' + url;
-                        // 尝试HTTPS
-                        try {
-                            const httpsController = new AbortController();
-                            const httpsTimeoutId = setTimeout(() => httpsController.abort(), 25000);
-                            
-                            response = await fetch('/check_status', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({ 
-                                    url: url,
-                                    protocol: 'https'
-                                }),
-                                signal: httpsController.signal
-                            });
-                            
-                            clearTimeout(httpsTimeoutId);
-                            const httpsData = await response.json();
-                            
-                            // 如果HTTPS成功（2xx或3xx），使用HTTPS的结果
-                            if (httpsData.status >= 200 && httpsData.status < 400) {
-                                data = httpsData;
-                            } else if (httpsData.status === 0) {
-                                // HTTPS也连接失败，保持HTTP的错误信息
-                                // data保持不变
-                            } else {
-                                // HTTPS返回其他错误，使用HTTPS的结果
-                                data = httpsData;
-                            }
-                        } catch (fetchError) {
-                            // 如果无法连接到服务器，使用之前的错误信息
-                            if (fetchError.name === 'AbortError' || 
-                                fetchError.message.includes('Failed to fetch') || 
-                                fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
-                                fetchError.message.includes('NetworkError')) {
-                                // 如果是临时错误且不是最后一次尝试，返回以便重试
-                                if (!isFinalAttempt) {
-                                    return {
-                                        status: 0,
-                                        message: '连接超时或失败（将重试）',
-                                        isFinal: false
-                                    };
-                                }
-                                data = {
-                                    status: 0,
-                                    message: '无法连接到服务器',
-                                    isFinal: true
-                                };
-                            } else {
-                                throw fetchError;
-                            }
-                        }
-                    } else {
-                        // HTTP成功，构建完整URL
-                        finalUrl = 'http://' + url;
-                    }
-                } else if (url.startsWith('http://')) {
-                    finalUrl = url;
-                } else if (url.startsWith('https://')) {
-                    finalUrl = url;
-                }
-                
-                // 判断是否为临时错误（可以重试）
-                const isTemporaryError = data.status === 0 && (
-                    data.message.includes('请求超时') || 
-                    data.message.includes('连接超时') ||
-                    data.errorCode === 'ETIMEDOUT' ||
-                    data.errorCode === 'ECONNRESET'
-                );
-                
-                // 如果是临时错误且不是最后一次尝试，返回以便重试
-                if (isTemporaryError && !isFinalAttempt) {
-                    return {
-                        status: 0,
-                        message: data.message + '（将重试）',
-                        isFinal: false
-                    };
-                }
-                
-                // 更新结果，传入完整URL
-                updateResult(resultId, url, data, finalUrl);
-                
-                // 更新统计和成功列表
-                if (data.status >= 200 && data.status < 300) {
+                });
+
+                clearTimeout(timeoutId);
+
+                // 成功获取响应
+                const statusCode = response.status;
+                let statusMessage = response.statusText || getStatusMessage(statusCode);
+
+                let result = {
+                    status: statusCode,
+                    message: statusMessage,
+                    corsSupported: true
+                };
+
+                // 更新结果
+                updateResult(resultId, url, result, url);
+
+                // 更新统计
+                if (statusCode >= 200 && statusCode < 300) {
                     stats.success++;
-                    successUrls.push(finalUrl);
+                    successUrls.push(url);
                 } else {
                     stats.error++;
                 }
-                
-                stats.checked++;
-                updateStats();
-                updateProgress();
-                
-                // 返回结果
-                return {
-                    ...data,
-                    isFinal: true
-                };
+
             } catch (error) {
-                // 处理错误
-                const errorResult = {
+                // 处理各种错误情况
+                let errorResult = {
                     status: 0,
-                    message: '请求失败: ' + error.message,
-                    isFinal: isFinalAttempt
+                    message: '检查失败',
+                    corsSupported: false
                 };
-                
-                // 如果是最后一次尝试，更新结果
-                if (isFinalAttempt) {
-                    updateResult(resultId, url, errorResult, finalUrl);
-                    stats.error++;
-                    stats.checked++;
-                    updateStats();
-                    updateProgress();
+
+                if (error.name === 'AbortError') {
+                    errorResult.message = '请求超时（15秒）';
+                } else if (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin')) {
+                    errorResult.message = 'CORS跨域限制 - 网站不支持跨域访问';
+                    errorResult.corsLimited = true;
+                } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorResult.message = '网络错误 - 无法连接到服务器';
+                } else if (error.message.includes('TypeError')) {
+                    errorResult.message = '无效URL或网络不可达';
+                } else {
+                    errorResult.message = '未知错误: ' + error.message;
                 }
-                
-                return errorResult;
+
+                // 更新结果
+                updateResult(resultId, url, errorResult, url);
+
+                // 更新统计
+                stats.error++;
             }
+
+            stats.checked++;
+            updateStats();
+            updateProgress();
         }
 
         function updateResult(resultId, url, data, finalUrl = null) {
@@ -867,7 +729,12 @@
             let statusCodeClass = 'status-error';
             let filterType = 'error'; // 用于筛选的类型
 
-            if (data.status >= 200 && data.status < 300) {
+            if (data.corsLimited) {
+                statusClass = 'cors-limited';
+                statusText = 'CORS受限';
+                statusCodeClass = 'status-cors-limited';
+                filterType = 'cors-limited';
+            } else if (data.status >= 200 && data.status < 300) {
                 statusClass = 'success';
                 statusText = '成功';
                 statusCodeClass = 'status-200';
@@ -887,24 +754,13 @@
                 statusText = '服务器错误';
                 statusCodeClass = 'status-5xx';
                 filterType = 'error';
-            } else if (data.status === 0) {
-                filterType = 'error';
             }
 
             // 记录结果状态
             resultStatusMap[resultId] = filterType;
 
-            // 确定显示的URL（如果有finalUrl则使用，否则使用原始url）
+            // 确定显示的URL
             let displayUrl = finalUrl || url;
-            // 如果displayUrl没有协议，根据状态判断（成功通常是https，失败可能是http）
-            if (!displayUrl.startsWith('http://') && !displayUrl.startsWith('https://')) {
-                // 如果状态码为0（连接失败），可能是http失败，尝试https
-                if (data.status === 0) {
-                    displayUrl = 'https://' + displayUrl;
-                } else {
-                    displayUrl = 'http://' + displayUrl;
-                }
-            }
 
             resultItem.className = 'result-item ' + statusClass;
             resultItem.setAttribute('data-status', filterType);
@@ -918,9 +774,33 @@
                     ${data.status || 'N/A'} ${data.message ? ' - ' + escapeHtml(data.message) : ''}
                 </div>
             `;
-            
+
             // 应用当前筛选
             applyFilter();
+        }
+
+        // 获取HTTP状态码的友好描述
+        function getStatusMessage(code) {
+            const messages = {
+                200: 'OK',
+                201: 'Created',
+                204: 'No Content',
+                301: 'Moved Permanently',
+                302: 'Found',
+                304: 'Not Modified',
+                400: 'Bad Request',
+                401: 'Unauthorized',
+                403: 'Forbidden',
+                404: 'Not Found',
+                405: 'Method Not Allowed',
+                408: 'Request Timeout',
+                429: 'Too Many Requests',
+                500: 'Internal Server Error',
+                502: 'Bad Gateway',
+                503: 'Service Unavailable',
+                504: 'Gateway Timeout',
+            };
+            return messages[code] || `HTTP ${code}`;
         }
 
         // 筛选结果
@@ -961,6 +841,12 @@
                     } else {
                         item.classList.add('hidden');
                     }
+                } else if (currentFilter === 'cors-limited') {
+                    if (status === 'cors-limited') {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
                 } else if (currentFilter === 'redirect') {
                     if (status === 'redirect') {
                         item.classList.remove('hidden');
@@ -989,51 +875,15 @@
             return div.innerHTML;
         }
 
-        // 页面加载时检查服务器连接
-        window.addEventListener('DOMContentLoaded', async () => {
-            // 检查是否通过服务器访问（不是file://协议）
-            if (window.location.protocol === 'file:') {
-                alert('请通过服务器访问此页面！\n\n请先启动服务器：\nnode server.js\n\n然后在浏览器中访问：\nhttp://localhost:3000');
-                return;
-            }
-            
-            // 尝试连接服务器
-            try {
-                const response = await fetch('/check_status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        url: 'test',
-                        protocol: 'http'
-                    })
-                });
-                // 服务器正常
-            } catch (error) {
-                // 如果无法连接，显示提示
-                if (error.message.includes('Failed to fetch') || 
-                    error.message.includes('ERR_CONNECTION_REFUSED') ||
-                    error.message.includes('NetworkError')) {
-                    console.warn('无法连接到服务器，请确保服务器正在运行');
-                    // 在页面上显示提示
-                    const warningDiv = document.createElement('div');
-                    warningDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #ffc107; color: #000; padding: 15px; text-align: center; z-index: 10000; font-weight: bold;';
-                    warningDiv.innerHTML = '⚠️ 无法连接到服务器！请确保服务器正在运行（运行命令：node server.js）';
-                    document.body.insertBefore(warningDiv, document.body.firstChild);
-                }
-            }
-        });
-
         // 复制成功的域名
         function copySuccessUrls() {
             if (successUrls.length === 0) {
                 alert('没有成功的域名！');
                 return;
             }
-            
+
             const text = successUrls.join('\n');
-            
+
             // 使用现代API复制到剪贴板
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
@@ -1058,7 +908,7 @@
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            
+
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
@@ -1069,10 +919,13 @@
             } catch (err) {
                 alert('复制失败，请手动复制：\n' + text);
             }
-            
+
             document.body.removeChild(textArea);
         }
+
+        // 初始化变量
+        let currentFilter = 'all';
+        let resultStatusMap = {};
     </script>
 </body>
 </html>
-
