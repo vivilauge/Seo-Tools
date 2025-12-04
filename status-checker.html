@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seo-Tools - 网站状态码批量检查工具</title>
+    <title>Seo-Tools - 网站状态码批量检查工具 (Node.js版)</title>
     <style>
         * {
             margin: 0;
@@ -474,10 +474,10 @@
                     <button class="filter-btn active" data-filter="all" onclick="filterResults('all')">全部</button>
                     <button class="filter-btn" data-filter="success" onclick="filterResults('success')">成功 (2xx)</button>
                     <button class="filter-btn" data-filter="http-success" onclick="filterResults('http-success')">HTTP连接成功</button>
-                    <button class="filter-btn" data-filter="image-check" onclick="filterResults('image-check')">图片检测</button>
                     <button class="filter-btn" data-filter="error" onclick="filterResults('error')">失败</button>
                     <button class="filter-btn" data-filter="cors-limited" onclick="filterResults('cors-limited')">CORS受限</button>
                     <button class="filter-btn" data-filter="mixed-content" onclick="filterResults('mixed-content')">浏览器安全策略</button>
+                    <button class="filter-btn" data-filter="redirect-success" onclick="filterResults('redirect-success')">HTTPS重定向成功</button>
                     <button class="filter-btn" data-filter="redirect" onclick="filterResults('redirect')">重定向 (3xx)</button>
                 </div>
             </div>
@@ -650,84 +650,48 @@
             }
         }
 
-        // 检查单个URL（纯前端实现）
+        // 检查单个URL（通过Node.js服务器代理）
         async function checkUrl(url, resultId, index) {
             if (!isChecking) return;
 
             try {
-                // 使用fetch API直接发起请求
+                // 通过Node.js服务器代理请求，避免浏览器安全限制
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+                const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时
 
-                // 根据协议选择不同的fetch模式
-                const isHttp = url.startsWith('http://');
-                const fetchOptions = {
-                    method: 'HEAD', // 使用HEAD请求，只获取响应头，不获取内容
-                    cache: 'no-cache',
-                    signal: controller.signal,
+                const response = await fetch('/check_status', {
+                    method: 'POST',
                     headers: {
-                        'Accept': 'text/html,application/json,*/*',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                };
-
-                // 对于http协议，使用no-cors模式以避免CORS问题
-                // 对于https协议，使用cors模式
-                if (isHttp) {
-                    fetchOptions.mode = 'no-cors';
-                } else {
-                    fetchOptions.mode = 'cors';
-                }
-
-                const response = await fetch(url, fetchOptions);
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        protocol: url.startsWith('https://') ? 'https' : 'http'
+                    }),
+                    signal: controller.signal
+                });
 
                 clearTimeout(timeoutId);
 
-                // 处理响应
-                const isHttpProtocol = url.startsWith('http://');
+                if (!response.ok) {
+                    throw new Error(`服务器响应错误: ${response.status}`);
+                }
 
-                if (isHttpProtocol) {
-                    // HTTP协议使用no-cors模式，无法读取详细状态码
-                    // 但是fetch成功说明连接是可达的
-                    let result = {
-                        status: 200, // 假设成功，因为fetch没有抛出错误
-                        message: 'HTTP连接成功（no-cors模式）',
-                        corsSupported: false,
-                        isHttp: true
-                    };
+                const data = await response.json();
 
-                    // 更新结果
-                    updateResult(resultId, url, result, url);
+                // 更新结果
+                updateResult(resultId, url, data, url);
 
-                    // 更新统计
+                // 更新统计
+                if (data.status >= 200 && data.status < 300) {
                     stats.success++;
                     successUrls.push(url);
                 } else {
-                    // HTTPS协议可以读取详细状态码
-                    const statusCode = response.status;
-                    let statusMessage = response.statusText || getStatusMessage(statusCode);
-
-                    let result = {
-                        status: statusCode,
-                        message: statusMessage,
-                        corsSupported: true
-                    };
-
-                    // 更新结果
-                    updateResult(resultId, url, result, url);
-
-                    // 更新统计
-                    if (statusCode >= 200 && statusCode < 300) {
-                        stats.success++;
-                        successUrls.push(url);
-                    } else {
-                        stats.error++;
-                    }
+                    stats.error++;
                 }
 
             } catch (error) {
                 // 处理各种错误情况
-                const isHttpProtocolError = url.startsWith('http://');
                 let errorResult = {
                     status: 0,
                     message: '检查失败',
@@ -735,31 +699,11 @@
                 };
 
                 if (error.name === 'AbortError') {
-                    errorResult.message = '请求超时（15秒）';
+                    errorResult.message = '请求超时（20秒）- 服务器响应太慢或网络问题';
                 } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                    errorResult.message = '网络错误 - 无法连接到服务器';
-                } else if (error.message.includes('TypeError')) {
-                    errorResult.message = '无效URL或网络不可达';
-                } else if (error.message.includes('Mixed Content')) {
-                    // HTTPS页面请求HTTP资源被浏览器阻止，这是浏览器安全策略
-                    // 显示用户友好的提示信息
-                    const mixedContentResult = {
-                        status: 0,
-                        message: '浏览器安全策略阻止：HTTPS页面无法直接检测HTTP资源。这是正常的安全限制，不代表网站不可访问。',
-                        corsSupported: false,
-                        mixedContentBlocked: true,
-                        userFriendly: true
-                    };
-                    updateResult(resultId, url, mixedContentResult, url);
-                    stats.error++;
-                    return;
-                } else if (isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
-                    // HTTP协议的CORS错误
-                    errorResult.message = 'HTTP网站存在但不支持跨域访问';
-                    errorResult.corsLimited = true;
-                } else if (!isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
-                    errorResult.message = 'HTTPS跨域限制 - 网站不支持跨域访问';
-                    errorResult.corsLimited = true;
+                    errorResult.message = '网络错误 - 无法连接到检测服务器，请确保服务器正在运行';
+                } else if (error.message.includes('服务器响应错误')) {
+                    errorResult.message = '服务器内部错误 - 请检查服务器日志';
                 } else {
                     errorResult.message = '未知错误: ' + error.message;
                 }
@@ -777,159 +721,7 @@
         }
 
         // 使用多种方法检测HTTP URL连接性（绕过混合内容限制）
-        function checkHttpWithImage(url, resultId, index) {
-            return new Promise((resolve) => {
-                if (!isChecking) {
-                    resolve();
-                    return;
-                }
-
-                let hasResult = false;
-
-                const completeCheck = (success, message) => {
-                    if (hasResult || !isChecking) return;
-                    hasResult = true;
-
-                    if (success) {
-                        const result = {
-                            status: 200,
-                            message: message,
-                            corsSupported: false,
-                            isHttp: true,
-                            imageCheck: true
-                        };
-                        updateResult(resultId, url, result, url);
-                        stats.success++;
-                        successUrls.push(url);
-                    } else {
-                        const errorResult = {
-                            status: 0,
-                            message: message,
-                            corsSupported: false,
-                            isHttp: true,
-                            imageCheck: true
-                        };
-                        updateResult(resultId, url, errorResult, url);
-                        stats.error++;
-                    }
-
-                    stats.checked++;
-                    updateStats();
-                    updateProgress();
-                    resolve();
-                };
-
-                const timeout = setTimeout(() => {
-                    completeCheck(false, 'HTTP检测超时（15秒）');
-                }, 15000);
-
-                // 方法1: 使用Image对象（最常用）
-                const img = new Image();
-                img.onload = () => {
-                    clearTimeout(timeout);
-                    completeCheck(true, 'HTTP连接成功（图片检测）');
-                };
-                img.onerror = () => {
-                    clearTimeout(timeout);
-                    // 如果Image失败，尝试其他方法
-                    tryOtherMethods();
-                };
-
-                // 方法2: 使用iframe检测（更好的兼容性）
-                function tryOtherMethods() {
-                    if (hasResult) return;
-
-                    try {
-                        const iframe = document.createElement('iframe');
-                        iframe.style.display = 'none';
-                        iframe.style.width = '1px';
-                        iframe.style.height = '1px';
-
-                        const iframeTimeout = setTimeout(() => {
-                            document.body.removeChild(iframe);
-                            tryBeacon();
-                        }, 8000); // iframe检测稍短的超时时间
-
-                        iframe.onload = function() {
-                            clearTimeout(iframeTimeout);
-                            document.body.removeChild(iframe);
-                            clearTimeout(timeout);
-                            completeCheck(true, 'HTTP连接成功（iframe检测）');
-                        };
-
-                        iframe.onerror = function() {
-                            clearTimeout(iframeTimeout);
-                            document.body.removeChild(iframe);
-                            tryBeacon();
-                        };
-
-                        // 临时添加到DOM中进行检测
-                        document.body.appendChild(iframe);
-
-                        // 设置src会触发加载
-                        setTimeout(() => {
-                            if (!hasResult) {
-                                iframe.src = url;
-                            }
-                        }, 100);
-
-                    } catch (e) {
-                        tryBeacon();
-                    }
-                }
-
-                // 方法3: 使用link元素检测样式表（最后的备选方案）
-                function tryBeacon() {
-                    if (hasResult) {
-                        completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
-                        return;
-                    }
-
-                    try {
-                        const link = document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.type = 'text/css';
-                        link.href = url;
-
-                        const linkTimeout = setTimeout(() => {
-                            document.head.removeChild(link);
-                            completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
-                        }, 5000);
-
-                        link.onload = function() {
-                            clearTimeout(linkTimeout);
-                            document.head.removeChild(link);
-                            clearTimeout(timeout);
-                            completeCheck(true, 'HTTP连接成功（样式检测）');
-                        };
-
-                        link.onerror = function() {
-                            clearTimeout(linkTimeout);
-                            if (document.head.contains(link)) {
-                                document.head.removeChild(link);
-                            }
-                            completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
-                        };
-
-                        // 添加到head中进行检测
-                        document.head.appendChild(link);
-
-                    } catch (e) {
-                        completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
-                    }
-                }
-
-                // 开始检测流程
-                try {
-                    // 添加时间戳参数避免缓存
-                    const separator = url.includes('?') ? '&' : '?';
-                    img.src = url + separator + '_t=' + Date.now();
-                } catch (e) {
-                    // 如果连Image都不能设置，直接尝试其他方法
-                    tryOtherMethods();
-                }
-            });
-        }
+        // checkHttpWithImage function removed - now using Node.js server proxy
 
         function updateResult(resultId, url, data, finalUrl = null) {
             const resultItem = document.getElementById(resultId);
@@ -950,7 +742,7 @@
                 statusText = 'CORS受限';
                 statusCodeClass = 'status-cors-limited';
                 filterType = 'cors-limited';
-            } else if (data.isHttp && data.status === 200) {
+            } else if (data.protocol === 'http' && data.status >= 200 && data.status < 300) {
                 // HTTP协议连接成功
                 statusClass = 'success';
                 statusText = 'HTTP连接成功';
@@ -978,18 +770,32 @@
                 filterType = 'error';
             }
 
+            // 处理重定向信息
+            let redirectInfo = '';
+            if (data.redirected_from_http) {
+                redirectInfo = ` (自动重定向自: ${data.original_http_url})`;
+                // 如果是从HTTP重定向过来的，无论状态码如何都算重定向成功
+                statusText = 'HTTPS重定向成功';
+                filterType = 'redirect-success';
+            }
+
             // 记录结果状态
             resultStatusMap[resultId] = filterType;
 
             // 确定显示的URL
             let displayUrl = finalUrl || url;
 
+            // 如果是从HTTP重定向到HTTPS，显示最终的HTTPS URL
+            if (data.redirected_from_http && data.protocol === 'https') {
+                displayUrl = data.original_http_url.replace(/^http:/, 'https:');
+            }
+
             resultItem.className = 'result-item ' + statusClass;
             resultItem.setAttribute('data-status', filterType);
             resultItem.innerHTML = `
                 <div class="result-url">
                     <a href="${escapeHtml(displayUrl)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; cursor: pointer;">
-                        ${escapeHtml(displayUrl)}
+                        ${escapeHtml(displayUrl)}${redirectInfo}
                     </a>
                 </div>
                 <div class="result-status ${statusCodeClass}">
@@ -1069,8 +875,8 @@
                     } else {
                         item.classList.add('hidden');
                     }
-                } else if (currentFilter === 'image-check') {
-                    if (status === 'image-check') {
+                } else if (currentFilter === 'redirect-success') {
+                    if (status === 'redirect-success') {
                         item.classList.remove('hidden');
                     } else {
                         item.classList.add('hidden');
