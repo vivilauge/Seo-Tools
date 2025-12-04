@@ -409,8 +409,8 @@
             <div style="text-align: left; margin-bottom: 15px;">
                 <a href="index.html" style="color: white; text-decoration: none; font-size: 14px; opacity: 0.9; transition: opacity 0.1s;">← 返回首页</a>
             </div>
-            <h1>🌐 网站状态码批量检查工具</h1>
-            <p class="description">批量检查网站URL的状态码，实时显示检查结果</p>
+            <h1>🌐 网站状态码批量检查工具 (HTTP版)</h1>
+            <p class="description">批量检查网站URL的状态码，支持检测HTTP资源（在HTTP环境下运行）</p>
         </div>
 
 
@@ -434,7 +434,7 @@
                     <textarea id="urlList" placeholder="https://example.com/api/test&#10;http://another.com/status&#10;api.test.com/endpoint&#10;example.com/path"></textarea>
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
                         💡 提示：支持HTTP和HTTPS协议，不带协议的URL会自动添加http://前缀。<br>
-                        ⚠️ 重要：HTTPS页面无法检测HTTP资源（浏览器安全限制），建议使用HTTP版本的工具页面检测HTTP资源。
+                        ✅ 优势：在HTTP环境下可以检测所有类型的资源，包括HTTP资源。
                     </small>
                 </div>
                 <div class="button-group">
@@ -739,14 +739,10 @@
                     errorResult.message = '网络错误 - 无法连接到服务器';
                 } else if (error.message.includes('TypeError')) {
                     errorResult.message = '无效URL或网络不可达';
-                } else if (error.message.includes('Mixed Content')) {
-                    // HTTPS页面请求HTTP资源被浏览器阻止，尝试图片检测
+                } else if (isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
+                    // HTTP协议的CORS错误，尝试图片检测
                     await checkHttpWithImage(url, resultId, index);
                     return; // 图片检测会处理结果更新
-                } else if (isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
-                    // HTTP协议的CORS错误
-                    errorResult.message = 'HTTP网站存在但不支持跨域访问';
-                    errorResult.corsLimited = true;
                 } else if (!isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
                     errorResult.message = 'HTTPS跨域限制 - 网站不支持跨域访问';
                     errorResult.corsLimited = true;
@@ -766,7 +762,7 @@
             updateProgress();
         }
 
-        // 使用Image对象检测HTTP URL连接性（绕过混合内容限制）
+        // 使用Image对象检测HTTP URL连接性（HTTP环境下可以使用）
         function checkHttpWithImage(url, resultId, index) {
             return new Promise((resolve) => {
                 if (!isChecking) {
@@ -834,9 +830,7 @@
                 };
 
                 // 尝试加载图片（通常服务器会返回404或其他状态，但连接是可达的）
-                // 添加时间戳参数避免缓存
-                const separator = url.includes('?') ? '&' : '?';
-                img.src = url + separator + '_t=' + Date.now();
+                img.src = url;
             });
         }
 
@@ -849,16 +843,17 @@
             let statusCodeClass = 'status-error';
             let filterType = 'error'; // 用于筛选的类型
 
-            if (data.mixedContentBlocked) {
-                statusClass = 'cors-limited';
-                statusText = '混合内容限制';
-                statusCodeClass = 'status-cors-limited';
-                filterType = 'mixed-content';
-            } else if (data.corsLimited) {
+            if (data.corsLimited) {
                 statusClass = 'cors-limited';
                 statusText = 'CORS受限';
                 statusCodeClass = 'status-cors-limited';
                 filterType = 'cors-limited';
+            } else if (data.isHttp && data.status === 200 && data.imageCheck) {
+                // 图片检测HTTP连接成功
+                statusClass = 'success';
+                statusText = 'HTTP连接成功';
+                statusCodeClass = 'status-200';
+                filterType = 'image-check';
             } else if (data.isHttp && data.status === 200) {
                 // HTTP协议连接成功
                 statusClass = 'success';
@@ -968,12 +963,6 @@
                     }
                 } else if (currentFilter === 'http-success') {
                     if (status === 'http-success') {
-                        item.classList.remove('hidden');
-                    } else {
-                        item.classList.add('hidden');
-                    }
-                } else if (currentFilter === 'mixed-content') {
-                    if (status === 'mixed-content') {
                         item.classList.remove('hidden');
                     } else {
                         item.classList.add('hidden');
