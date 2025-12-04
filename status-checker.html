@@ -477,6 +477,7 @@
                     <button class="filter-btn" data-filter="image-check" onclick="filterResults('image-check')">图片检测</button>
                     <button class="filter-btn" data-filter="error" onclick="filterResults('error')">失败</button>
                     <button class="filter-btn" data-filter="cors-limited" onclick="filterResults('cors-limited')">CORS受限</button>
+                    <button class="filter-btn" data-filter="mixed-content" onclick="filterResults('mixed-content')">浏览器安全策略</button>
                     <button class="filter-btn" data-filter="redirect" onclick="filterResults('redirect')">重定向 (3xx)</button>
                 </div>
             </div>
@@ -740,9 +741,18 @@
                 } else if (error.message.includes('TypeError')) {
                     errorResult.message = '无效URL或网络不可达';
                 } else if (error.message.includes('Mixed Content')) {
-                    // HTTPS页面请求HTTP资源被浏览器阻止，尝试图片检测
-                    await checkHttpWithImage(url, resultId, index);
-                    return; // 图片检测会处理结果更新
+                    // HTTPS页面请求HTTP资源被浏览器阻止，这是浏览器安全策略
+                    // 显示用户友好的提示信息
+                    const mixedContentResult = {
+                        status: 0,
+                        message: '浏览器安全策略阻止：HTTPS页面无法直接检测HTTP资源。这是正常的安全限制，不代表网站不可访问。',
+                        corsSupported: false,
+                        mixedContentBlocked: true,
+                        userFriendly: true
+                    };
+                    updateResult(resultId, url, mixedContentResult, url);
+                    stats.error++;
+                    return;
                 } else if (isHttpProtocolError && (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin'))) {
                     // HTTP协议的CORS错误
                     errorResult.message = 'HTTP网站存在但不支持跨域访问';
@@ -766,7 +776,7 @@
             updateProgress();
         }
 
-        // 使用Image对象检测HTTP URL连接性（绕过混合内容限制）
+        // 使用多种方法检测HTTP URL连接性（绕过混合内容限制）
         function checkHttpWithImage(url, resultId, index) {
             return new Promise((resolve) => {
                 if (!isChecking) {
@@ -774,31 +784,16 @@
                     return;
                 }
 
-                const img = new Image();
-                const timeout = setTimeout(() => {
-                    // 超时处理
-                    const errorResult = {
-                        status: 0,
-                        message: 'HTTP检测超时（15秒）',
-                        corsSupported: false,
-                        isHttp: true,
-                        imageCheck: true
-                    };
-                    updateResult(resultId, url, errorResult, url);
-                    stats.error++;
-                    stats.checked++;
-                    updateStats();
-                    updateProgress();
-                    resolve();
-                }, 15000);
+                let hasResult = false;
 
-                img.onload = () => {
-                    clearTimeout(timeout);
-                    if (isChecking) {
-                        // 图片加载成功，说明HTTP连接可达
+                const completeCheck = (success, message) => {
+                    if (hasResult || !isChecking) return;
+                    hasResult = true;
+
+                    if (success) {
                         const result = {
                             status: 200,
-                            message: 'HTTP连接成功（图片检测）',
+                            message: message,
                             corsSupported: false,
                             isHttp: true,
                             imageCheck: true
@@ -806,37 +801,133 @@
                         updateResult(resultId, url, result, url);
                         stats.success++;
                         successUrls.push(url);
-                        stats.checked++;
-                        updateStats();
-                        updateProgress();
-                    }
-                    resolve();
-                };
-
-                img.onerror = () => {
-                    clearTimeout(timeout);
-                    if (isChecking) {
-                        // 图片加载失败
+                    } else {
                         const errorResult = {
                             status: 0,
-                            message: 'HTTP连接失败（图片检测）',
+                            message: message,
                             corsSupported: false,
                             isHttp: true,
                             imageCheck: true
                         };
                         updateResult(resultId, url, errorResult, url);
                         stats.error++;
-                        stats.checked++;
-                        updateStats();
-                        updateProgress();
                     }
+
+                    stats.checked++;
+                    updateStats();
+                    updateProgress();
                     resolve();
                 };
 
-                // 尝试加载图片（通常服务器会返回404或其他状态，但连接是可达的）
-                // 添加时间戳参数避免缓存
-                const separator = url.includes('?') ? '&' : '?';
-                img.src = url + separator + '_t=' + Date.now();
+                const timeout = setTimeout(() => {
+                    completeCheck(false, 'HTTP检测超时（15秒）');
+                }, 15000);
+
+                // 方法1: 使用Image对象（最常用）
+                const img = new Image();
+                img.onload = () => {
+                    clearTimeout(timeout);
+                    completeCheck(true, 'HTTP连接成功（图片检测）');
+                };
+                img.onerror = () => {
+                    clearTimeout(timeout);
+                    // 如果Image失败，尝试其他方法
+                    tryOtherMethods();
+                };
+
+                // 方法2: 使用iframe检测（更好的兼容性）
+                function tryOtherMethods() {
+                    if (hasResult) return;
+
+                    try {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.style.width = '1px';
+                        iframe.style.height = '1px';
+
+                        const iframeTimeout = setTimeout(() => {
+                            document.body.removeChild(iframe);
+                            tryBeacon();
+                        }, 8000); // iframe检测稍短的超时时间
+
+                        iframe.onload = function() {
+                            clearTimeout(iframeTimeout);
+                            document.body.removeChild(iframe);
+                            clearTimeout(timeout);
+                            completeCheck(true, 'HTTP连接成功（iframe检测）');
+                        };
+
+                        iframe.onerror = function() {
+                            clearTimeout(iframeTimeout);
+                            document.body.removeChild(iframe);
+                            tryBeacon();
+                        };
+
+                        // 临时添加到DOM中进行检测
+                        document.body.appendChild(iframe);
+
+                        // 设置src会触发加载
+                        setTimeout(() => {
+                            if (!hasResult) {
+                                iframe.src = url;
+                            }
+                        }, 100);
+
+                    } catch (e) {
+                        tryBeacon();
+                    }
+                }
+
+                // 方法3: 使用link元素检测样式表（最后的备选方案）
+                function tryBeacon() {
+                    if (hasResult) {
+                        completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
+                        return;
+                    }
+
+                    try {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.type = 'text/css';
+                        link.href = url;
+
+                        const linkTimeout = setTimeout(() => {
+                            document.head.removeChild(link);
+                            completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
+                        }, 5000);
+
+                        link.onload = function() {
+                            clearTimeout(linkTimeout);
+                            document.head.removeChild(link);
+                            clearTimeout(timeout);
+                            completeCheck(true, 'HTTP连接成功（样式检测）');
+                        };
+
+                        link.onerror = function() {
+                            clearTimeout(linkTimeout);
+                            if (document.head.contains(link)) {
+                                document.head.removeChild(link);
+                            }
+                            completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
+                        };
+
+                        // 添加到head中进行检测
+                        document.head.appendChild(link);
+
+                    } catch (e) {
+                        completeCheck(false, 'HTTP连接失败（所有检测方法均失败）');
+                    }
+                }
+
+                // 开始检测流程
+                try {
+                    // 添加时间戳参数避免缓存
+                    const separator = url.includes('?') ? '&' : '?';
+                    img.src = url + separator + '_t=' + Date.now();
+                } catch (e) {
+                    // 如果连Image都不能设置，直接尝试其他方法
+                    tryOtherMethods();
+                }
             });
         }
 
@@ -851,7 +942,7 @@
 
             if (data.mixedContentBlocked) {
                 statusClass = 'cors-limited';
-                statusText = '混合内容限制';
+                statusText = data.userFriendly ? '浏览器安全策略' : '混合内容限制';
                 statusCodeClass = 'status-cors-limited';
                 filterType = 'mixed-content';
             } else if (data.corsLimited) {
